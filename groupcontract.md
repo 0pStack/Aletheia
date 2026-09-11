@@ -44,10 +44,13 @@ Ni ska planera in:
 - Vem ansvarar för att dokumentera daily standup i repot? (Rotera gärna denna roll med någon frekvens så att inte en person gör det enbart).
 
 ### Feedback & återkoppling
-- Hur gör vi code reviews?
-- Hur ger vi feedback på designarbete?
-- Inom vilken tidsfrist ska återkoppling ges?
-- Hur känns det när man inte får någon återkoppling på det man har gjort?
+- **Code review sker via pull requests.** `main` är skyddad: ingen pushar direkt dit, allt går via PR med minst ett godkännande.
+- Reviewern läser diffen mot issuens acceptanskriterier — inte mot egen smak. Kommentarer ska vara konkreta och peka på rad.
+- **Alla konversationer i en PR måste vara lösta innan merge** (aktiverat i branch protection).
+- Nya commits på en redan granskad PR nollställer godkännandet, så granska om efter ändringar.
+- **Tidsfrist:** en öppen PR ska få första återkoppling inom 24 timmar på vardagar. Ligger den längre får man påminna i Teams-chatten.
+- Ingen mergear sin egen PR utan att någon annan har godkänt den.
+- Feedback ges på arbetet, inte på personen. Skriv ut det som är bra också — en PR som bara får kritik är demotiverande, och det märks i gruppen.
 
 ### Personlighetstyp
 > Det kan kännas obekvämt att diskutera följande, men det är en grund för ett bra samarbete att dels ha lite självinsikt, men också förståelse för hur ens gruppmedlemmar fungerar i olika situationer.
@@ -73,10 +76,23 @@ Vilken roll brukar varje gruppmedlem ta på sig i ett grupparbete? Vilken roll h
 - **Dörrvakten/Processledaren:** Säkerställer deltagande, hanterar diskussionen.
 
 ### Uppgiftsfördelning
-- Hur fördelas uppgifter?
-- Hur kommunicerar man när man tar på sig en uppgift utanför daily standupen, eller ska man vänta till standupen?
-- Vad är definitionen på "klar"?
-- Hur granskar vi varandras kod?
+- Allt arbete ligger som **issues i repot**, grupperade i fem milstolpar (Sprint 0–4) som anger beroendeordning.
+- Varje issue har en **spåretikett**: `track:chain`, `track:p2p`, `track:backend`, `track:frontend` eller `track:all`. Varje person äger ett spår och filtrerar på sin etikett.
+- Man **tilldelar sig själv** issuen innan man börjar, så att ingen råkar göra samma sak. Det behöver inte vänta till daily standup — men nämn det i standupen dagen efter.
+- Man tar en ny issue först när den förra är mergead.
+- **Beroenden:** Sprint 0 ska vara klar innan Sprint 1 påbörjas. Blockkedjekärnan måste ligga före `auditLogger` och före allt i Sprint 2.
+
+**Definition av "klar" (Definition of Done)**
+
+En issue är klar när samtliga punkter är uppfyllda:
+
+1. Acceptanskriterierna i issuen är uppfyllda.
+2. Koden har tester, och alla tester går igenom.
+3. `npm run lint` är rent.
+4. En PR är öppnad, granskad och godkänd av minst en annan i gruppen.
+5. PR:en är mergead till `main` och issuen är stängd via `Closes #N`.
+
+Arbete som ligger kvar i en lokal branch är inte klart. "Nästan klart" finns inte.
 
 ### Övriga förväntningar
 - Vilken ambitionsnivå har vi?
@@ -97,11 +113,20 @@ Om ingen vill vara scrum master så bör ni komma överens om vem som styr skuta
 Om ni vill ta upp någonting utöver det fördefinierade. Skriv gärna en egen rubrik.
 
 ### Kodstandard
-- Hur skriver vi våra commit-meddelanden? Ska vi följa någon särskild standard (t.ex. Conventional Commits eller använda gitmoji).
-- Hur indenterar vi vår kod?
-- Vilket språk använder vi i vår kod, för t.ex. CSS-selektorer?
-- Hur kommenterar vi vår kod?
-- Ska vi använda några linters (ESLint, Prettier, Biome…?) och vilka konfigurationer ska vi göra för dessa?
+- **Commit-meddelanden:** Conventional Commits — `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`, `perf:`, `ci:`. Imperativ form, på engelska.
+- **Branch per issue:** `gh issue develop <nr> --checkout` skapar och länkar branchen automatiskt. Ingen arbetar direkt i `main`.
+- **Merge-strategi:** squash merge, och branchen tas bort efter merge.
+- **Kodspråk:** all kod, alla identifierare, kommentarer och commit-meddelanden på **engelska**. Diskussion i gruppen på svenska.
+- **Indentering:** 2 mellanslag, aldrig tabbar. Prettier avgör i praktiken.
+- **Kommentarer:** bara när *varför* inte är uppenbart. Kommentera inte det som koden redan säger.
+- **Linters:** ESLint + Prettier, konfigureras i Sprint 0 (issue #7). Prettier äger formatering, ESLint äger regler — ingen överlappning dem emellan.
+- **Mappstruktur:** varje spår äger sin egen katalog (`chain/`, `network/`, `api/`, `client/`) så att merge-konflikter blir sällsynta.
+- **Gemensamma typer och format** ligger i `docs/interfaces.md` och ändras bara efter överenskommelse i gruppen.
+- **Projektets hårda regel:** inga patientuppgifter får någonsin hamna på blockkedjan — endast hashar och ID:n. Regeln bevakas av ett test som körs i CI (issue #27), inte av minnet.
+
+**Hantering av kodkonflikter**
+- Hämta `main` ofta (`git switch main && git pull`) så att brancher inte hinner driva isär.
+- Konflikten löses av den som öppnade PR:en. Ligger konflikten i någon annans kod löser ni den tillsammans — gissa inte i kod du inte skrivit.
 
 ### Underskrifter
 Slutligen ska ni signera dokumentet med era underskrifter.
