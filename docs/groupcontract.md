@@ -120,7 +120,7 @@ Om ni vill ta upp någonting utöver det fördefinierade. Skriv gärna en egen r
 - **Indentering:** 2 mellanslag, aldrig tabbar. Prettier avgör i praktiken.
 - **Kommentarer:** bara när *varför* inte är uppenbart. Kommentera inte det som koden redan säger.
 - **Linters:** ESLint + Prettier, konfigureras i Sprint 0 (issue #7). Prettier äger formatering, ESLint äger regler — ingen överlappning dem emellan.
-- **Mappstruktur:** varje spår äger sin egen katalog (`chain/`, `network/`, `api/`, `client/`) så att merge-konflikter blir sällsynta.
+- **Mappstruktur:** varje spår äger sin egen katalog (`chain/`, `network/`, `backend/`, `frontend/`) så att merge-konflikter blir sällsynta.
 - **Gemensamma typer och format** ligger i `docs/interfaces.md` och ändras bara efter överenskommelse i gruppen.
 - **Projektets hårda regel:** inga patientuppgifter får någonsin hamna på blockkedjan — endast hashar och ID:n. Regeln bevakas av ett test som körs i CI (issue #27), inte av minnet.
 
