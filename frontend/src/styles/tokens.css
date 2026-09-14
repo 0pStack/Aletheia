@@ -1,0 +1,83 @@
+:root {
+  /* Palette: interface is strictly monochrome */
+  /* Neutrals carry a trace of the hero: warm oxblood in the blacks, sage in the white */
+  --color-obsidian: oklch(0.14 0.008 30);
+  --color-paper: oklch(0.994 0.004 150);
+  --color-inkstone: oklch(0.21 0.006 30);
+  --color-slate: #636363;
+  --color-felt-gray: #6d6d6d;
+  --color-pewter: #808080;
+  /* #9a9a9a is 2.8:1 on white: decorative dividers only, never text or input borders */
+  --color-ash-mist: #9a9a9a;
+
+  --color-text: var(--color-inkstone);
+  --color-text-muted: var(--color-felt-gray);
+  --color-background: var(--color-paper);
+  --color-border: var(--color-obsidian);
+  --color-border-input: var(--color-pewter);
+  --color-divider: var(--color-ash-mist);
+  --color-focus: var(--color-obsidian);
+
+  /* Media only (login hero). Reads as green/amber/red status, so never near data. */
+  --color-iridescent-sage: rgb(160 224 171);
+  --color-iridescent-amber: rgb(255 172 46);
+  --color-iridescent-oxblood: rgb(165 45 37);
+  --gradient-iridescent: linear-gradient(
+    90deg,
+    var(--color-iridescent-sage),
+    var(--color-iridescent-amber) 50%,
+    var(--color-iridescent-oxblood)
+  );
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-hero: clamp(2.5rem, 6vw, 4.875rem);
+  --text-display: clamp(3.5rem, 14vw, 14rem);
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+
+  --leading-display: 0.76;
+  --leading-heading: 1.1;
+  --leading-body: 1.5;
+
+  /* Spacing: 4px base */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Shape: sharp or full pill, nothing in between */
+  --radius-sharp: 0;
+  --radius-pill: 75px;
+  --border-hairline: 1px solid var(--color-border);
+
+  /* Motion */
+  --ease-glide: cubic-bezier(0.19, 1, 0.22, 1);
+  --duration-ui: 200ms;
+  --duration-hero: 1.25s;
+
+  /* Layout */
+  --layout-max-width: 1078px;
+  --header-height: 66px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-ui: 0ms;
+    --duration-hero: 0ms;
+  }
+}

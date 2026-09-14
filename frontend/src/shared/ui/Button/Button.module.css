@@ -1,0 +1,59 @@
+.button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0.6875rem 2.0625rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  cursor: pointer;
+  transition:
+    color var(--duration-ui) var(--ease-glide),
+    transform calc(var(--duration-ui) * 0.6) var(--ease-glide);
+}
+
+/* Hover fills the pill from the bottom edge instead of switching color instantly. */
+.button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-obsidian);
+  transform: translateY(101%);
+  transition: transform calc(var(--duration-ui) * 2.25) var(--ease-glide);
+}
+
+.button:hover:not(:disabled) {
+  color: var(--color-paper);
+}
+
+.button:hover:not(:disabled)::before {
+  transform: translateY(0);
+}
+
+/* Solid: the primary action on dark surfaces. Hover deepens the fill from below. */
+.solid {
+  border-color: var(--color-paper);
+  background: var(--color-paper);
+  color: var(--color-obsidian);
+}
+
+.solid::before {
+  background: oklch(0.88 0.006 80);
+}
+
+.solid:hover:not(:disabled) {
+  color: var(--color-obsidian);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:disabled {
+  border-color: var(--color-border-input);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
