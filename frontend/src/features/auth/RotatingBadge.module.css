@@ -1,0 +1,32 @@
+.badge {
+  width: clamp(6.5rem, 16cqw, 10rem);
+  height: auto;
+  overflow: visible;
+}
+
+.ring {
+  transform-origin: 60px 60px;
+}
+
+.text {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  fill: currentColor;
+}
+
+.dot {
+  fill: currentColor;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ring {
+    animation: spin 28s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

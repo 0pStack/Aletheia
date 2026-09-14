@@ -1,0 +1,163 @@
+.hero {
+  --pointer-x: 0.5;
+  --pointer-y: 0.5;
+
+  container-type: inline-size;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 44vh;
+  overflow: hidden;
+  isolation: isolate;
+  /* Shown until the shader's first frame, and permanently if WebGL is unavailable. */
+  background: var(--color-obsidian) url('/images/login-hero.webp') center 30% / cover no-repeat;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    min-height: 100vh;
+  }
+}
+
+.liquid {
+  --lens-x: 0.56;
+  --lens-y: 0.6;
+
+  position: absolute;
+  inset: 0;
+}
+
+/* Desktop: the liquid spans the whole page behind the glass panel, so the lens moves left. */
+@media (min-width: 768px) {
+  .liquid {
+    --lens-x: 0.3;
+    --lens-y: 0.6;
+  }
+}
+
+/* Oxblood rises from the bottom edge and keeps the white wordmark legible over any frame. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    oklch(0.13 0.03 30 / 0.94) 0%,
+    oklch(0.16 0.045 30 / 0.82) 30%,
+    oklch(0.2 0.05 30 / 0.45) 55%,
+    transparent 78%
+  );
+  pointer-events: none;
+}
+
+/* Decorative type behaves like part of the image: no text cursor, no selection highlight. */
+.badge,
+.text {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+.badge {
+  position: absolute;
+  z-index: 1;
+  color: var(--color-paper);
+  top: clamp(var(--space-6), 4cqw, var(--space-12));
+  right: clamp(var(--space-6), 4cqw, var(--space-12));
+}
+
+/* The short phone hero band has no room for both the sphere and the badge. */
+@media (max-width: 767px) {
+  .badge {
+    display: none;
+  }
+}
+
+/* The right 45% of the page belongs to the glass panel on desktop. */
+@media (min-width: 768px) {
+  .badge {
+    right: calc(45% + var(--space-8));
+  }
+}
+
+.text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: clamp(var(--space-6), 5cqw, var(--space-12));
+  transform: translate3d(
+    calc((var(--pointer-x) - 0.5) * 10px),
+    calc((var(--pointer-y) - 0.5) * 10px),
+    0
+  );
+}
+
+.wordmark {
+  font-weight: var(--weight-light);
+  /* Sized against the hero's own width: in the split layout it is half the viewport. */
+  font-size: clamp(3.5rem, 25cqw, 14rem);
+  line-height: var(--leading-display);
+  letter-spacing: -0.035em;
+  color: var(--color-paper);
+  margin-left: -0.06em;
+}
+
+/* The hero is page-wide on desktop; keep the wordmark within the left column, clear of the panel. */
+@media (min-width: 768px) {
+  .wordmark {
+    font-size: clamp(3.5rem, 13cqw, 14rem);
+  }
+}
+
+.letter {
+  display: inline-block;
+}
+
+.tagline {
+  max-width: 28ch;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--color-paper);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .letter {
+    animation: letterIn 1.1s var(--ease-glide) backwards;
+    animation-delay: calc(900ms + var(--letter-delay, 0ms));
+  }
+
+  .tagline {
+    animation: rise var(--duration-hero) var(--ease-glide) backwards;
+    animation-delay: 1400ms;
+  }
+
+  .badge {
+    animation: fadeIn 1.6s var(--ease-glide) backwards;
+    animation-delay: 1600ms;
+  }
+}
+
+@keyframes letterIn {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(0.25em);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,9 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: var(--layout-max-width);
+  margin-inline: auto;
+  padding: var(--space-12) var(--space-6);
+}

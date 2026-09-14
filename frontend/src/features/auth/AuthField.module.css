@@ -1,0 +1,113 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  transition: color var(--duration-ui) var(--ease-glide);
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+.field:focus-within .label {
+  color: var(--color-text);
+}
+
+/* Editorial field: a single hairline instead of a box; focus draws a 2px rule across it. */
+.control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--field-line, var(--color-border-input));
+  transition: border-color var(--duration-ui) var(--ease-glide);
+}
+
+.control:hover {
+  border-bottom-color: var(--color-text);
+}
+
+.control::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--color-focus);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform calc(var(--duration-ui) * 2.5) var(--ease-glide);
+  pointer-events: none;
+}
+
+.control:focus-within::after {
+  transform: scaleX(1);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-radius: var(--radius-sharp);
+  background: transparent;
+  color: var(--color-text);
+  caret-color: var(--color-text);
+  font-size: var(--text-md);
+}
+
+/* The drawn 2px rule is the focus indicator for these fields. */
+.input:focus-visible {
+  outline: none;
+}
+
+/* Stops browser autofill from painting the field pale yellow on the dark glass. */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
+}
+
+.toggle {
+  margin-left: var(--space-3);
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--duration-ui) var(--ease-glide);
+}
+
+.toggle:hover {
+  color: var(--color-text);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--color-text);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
