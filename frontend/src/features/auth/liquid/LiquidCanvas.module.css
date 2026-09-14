@@ -1,0 +1,15 @@
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-glide);
+}
+
+.canvas[data-state='ready'] {
+  opacity: 1;
+}
+
+.canvas[data-state='fallback'] {
+  display: none;
+}
