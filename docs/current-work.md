@@ -20,8 +20,8 @@ This table matches the project board, [@Web3 - Alenthia Journal](https://github.
 | Board status | Issues |
 |--------------|--------|
 | Done | #1 backend folder and dependencies, #47 README, #48 group contract |
-| In Progress | #3 shapes (Anders) · partly done on `main`: #6 mock API, #7 lint and scripts (frontend only), #16 login page (visual only), #33 access denied page (static only) |
-| Todo | Everything else |
+| In Progress | All of Phase 0: #3 shapes (Anders), #4 whitelist, #5 SQL schema, #6 mock API, #7 lint and scripts |
+| Todo | Everything else. #16 login page and #33 access denied page already have partial work on `main` |
 
 **None of the open issues is finished yet.** The frontend scaffold (PR #53) gave a head start on #6, #7, #16 and #33, but each still has work left, which is listed under the issue below. `backend/` has only a `package.json` so far and no source code.
 
