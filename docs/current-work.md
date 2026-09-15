@@ -20,7 +20,7 @@ This table matches the project board, [@Web3 - Alenthia Journal](https://github.
 | Board status | Issues |
 |--------------|--------|
 | Done | #1 backend folder and dependencies, #47 README, #48 group contract |
-| In Progress | All of Phase 0: #3 shapes (Anders), #4 whitelist, #5 SQL schema, #6 mock API, #7 lint and scripts |
+| In Progress | All of Phase 0: #3 shapes (Anders), #4 whitelist, #5 SQL schema, #6 mock API, #7 lint and scripts (Ruslan) |
 | Todo | Everything else. #16 login page and #33 access denied page already have partial work on `main` |
 
 **None of the open issues is finished yet.** The frontend scaffold (PR #53) gave a head start on #6, #7, #16 and #33, but each still has work left, which is listed under the issue below. `backend/` has only a `package.json` so far and no source code.
@@ -58,7 +58,7 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - **Left:** only `GET /api/auth/session` is mocked. Add handlers with fake data for login, logout, patient search, patient + notes, and access log, including 401 and 403 responses.
 
 ### #7 Add npm scripts, ESLint and Prettier config
-**Blocks:** every backend, chain and p2p issue, because they need a test runner.
+**Status:** in progress (Ruslan). **Blocks:** every backend, chain and p2p issue, because they need a test runner.
 - **Already done:** the frontend has `dev`, `build`, `test`, `lint`, `format` and `typecheck`.
 - **Left in `backend/`:** `tsconfig.json`, a `src/` folder, `dev` (`tsx watch`), `test` (for example Vitest, to match the frontend), `lint`, and ESLint + Prettier config. The `test` script is still the npm placeholder.
 - Decide where chain and p2p code lives, for example `backend/src/chain/` and `backend/src/network/`.
