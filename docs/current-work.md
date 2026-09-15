@@ -23,7 +23,7 @@ This table matches the project board, [@Web3 - Alenthia Journal](https://github.
 | In Progress | #3 shapes (Anders) · partly done on `main`: #6 mock API, #7 lint and scripts (frontend only), #16 login page (visual only), #33 access denied page (static only) |
 | Todo | Everything else |
 
-**None of the 45 open issues is finished yet.** The frontend scaffold (PR #53) gave a head start on #6, #7, #16 and #33, but each still has work left, which is listed under the issue below. `backend/` has only a `package.json` so far and no source code.
+**None of the open issues is finished yet.** The frontend scaffold (PR #53) gave a head start on #6, #7, #16 and #33, but each still has work left, which is listed under the issue below. `backend/` has only a `package.json` so far and no source code.
 
 ---
 
@@ -73,7 +73,7 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 | Lane | Order |
 |------|-------|
 | Chain | #8 → #9 |
-| Backend | #10 → #11, #12 → #13 (#13 also needs #9 and #4) |
+| Backend | #10 → #11 → #12, #55 → #13 (#13 also needs #9 and #4) |
 | P2P | #14 → #15 |
 | Frontend | #16, #17, #18 (build against mocks, switch to the real API when it exists) |
 
@@ -107,7 +107,11 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 **Needs:** #10, #11.
 - Requires a session. Returns the patient and their notes in the envelope, or 404 if the patient doesn't exist.
 - Add integration tests (for example with `supertest`).
-- **Missing issue:** #17 also needs a search endpoint (`GET /api/patients?q=`). Build it here or open a new issue for it.
+
+### #55 GET /patients search route
+**Needs:** #10, #11. **Blocks:** #17 with real data.
+- `GET /api/patients?q=` searches by name or ID. Requires a session, and returns a list in the envelope.
+- Search inside the SQL query, not by loading every patient and filtering in JavaScript.
 
 ### #13 auditLogger middleware writing events to the chain
 **Needs:** #9, #4, #12.
@@ -134,7 +138,7 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - Add tests to `LoginPage.test.tsx`.
 
 ### #17 Patient search
-**Needs:** #6 (a search mock), then the search endpoint (see #12).
+**Needs:** #6 (a search mock), then #55.
 - Replace the placeholder in `PatientSearchPage.tsx`: a search input, a results list linking to `/patients/:id`, and loading, empty and error states.
 
 ### #18 Basic journal view
@@ -150,8 +154,9 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 
 | Lane | Order |
 |------|-------|
-| Chain | #19 → #20 → #21, and #22 (needs only #9) |
+| Chain | #19 → #20 → #21, and #22 and #57 (need only #9) |
 | Backend | #23 → #24, #25 · #26 (needs #13 + #20) · #27 (needs #4 + #13) |
+| All | #58 CI (needs #7) · #59 group decision about notes on both nodes (settle before Phase 3) |
 | P2P | #28 → #29 → #30 (needs #9, #15) |
 | Frontend | #31 (needs #23, #24) · #32 (needs #24) · #33 (needs #25) |
 
@@ -174,6 +179,10 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - Build a Merkle tree from sha256 hashes of the events (if a level has an odd count, duplicate the last hash). Store `merkleRoot` on the block and include it in the block hash.
 - Batch events into blocks, for example every N events or every few seconds.
 - `isChainValid` also recomputes the root.
+
+### #57 Persist the chain across restarts
+**Needs:** #9. **Blocks:** #37, #41, #46.
+- Save blocks to disk (a JSON file or a SQLite table) as they're added. On startup, load them and run `isChainValid` before the node accepts any requests.
 
 ### #23 Role-based access control
 **Needs:** #11, and the roles from #3.
@@ -199,7 +208,17 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 ### #27 Test asserting no patient data reaches the chain
 **Needs:** #4, #13.
 - After running some seeded requests, go through every block and fail if any key isn't on the whitelist. Also check that no seeded name or personnummer appears in any value.
-- "Runs in CI" means someone has to add a GitHub Actions workflow. There isn't one yet.
+- This test must run in CI, which comes with #58.
+
+### #58 CI workflow running lint and tests
+**Needs:** #7.
+- Add a GitHub Actions workflow in `.github/workflows/` that runs `npm ci`, lint and tests for `backend/` and `frontend/` on every push to `main`.
+- Since everyone pushes straight to `main`, CI is the only automatic check on each push.
+
+### #59 Decide how notes reach the other node
+**Group decision. Settle before #39 and #44.**
+- If each node has its own SQLite database, a note written on node 1 never reaches node 2's database.
+- Options: both nodes share one database, or notes are copied over the P2P connection along with blocks. Write the decision in `docs/interfaces.md`.
 
 ### #28 Connect node 3001 to node 3002
 **Needs:** #15.
@@ -237,9 +256,9 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 | Lane | Order |
 |------|-------|
 | Chain | #35 → #34 · #36 (needs #22) |
-| P2P | #37, #38 (need #34, #28) · #39 (needs #28, #24) |
-| Backend | #40 (needs #36) · #41 (needs #9) |
-| Frontend | #42 (needs an access log endpoint, see Gaps) · #43 (needs #40) · #44 (needs #39) |
+| P2P | #37, #38 (need #34, #28, #57) · #39 (needs #28, #24, #59) |
+| Backend | #40 (needs #36) · #41 (needs #57) · #56 (needs #13, #23) |
+| Frontend | #42 (needs #56) · #43 (needs #40) · #44 (needs #39) |
 
 ### #35 Validate incoming chains
 - Check a received chain from start to finish: its genesis block matches ours, and every link, hash, Merkle root and signature is valid.
@@ -254,7 +273,7 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - Test with an odd number of events.
 
 ### #37 Sync chain on reconnect
-**Needs:** #34, #28.
+**Needs:** #34, #28, #57.
 - When nodes connect, they compare chains. If the peer has a longer chain, ask for it and run `replaceChain`.
 - Test: stop node 2, add blocks on node 1, start node 2, and both nodes end up with the same chain.
 
@@ -264,21 +283,26 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - Decide what happens to events on the losing branch (add them again or accept they're lost) and document the choice.
 
 ### #39 Socket push for the live note list
-**Needs:** #28, #24.
+**Needs:** #28, #24, #59.
 - When a note is created, push an event over `/ws` to connected browsers, including browsers connected to the other node.
-- **Decide first:** does each node have its own SQLite file? If so, node 2 doesn't have node 1's note, and notes have to be copied between nodes too.
+- How the note itself reaches the other node is decided in #59.
 
 ### #40 Verification endpoint
 **Needs:** #36.
 - `GET /api/verify/:eventId` returns the block index, Merkle root, proof, and whether it's valid. Only hashes, no patient data.
 
 ### #41 Tamper detection
-**Needs:** #9.
+**Needs:** #57.
 - `GET /api/chain/status` returns `valid` and the index of the first bad block. Also check on startup and log a warning if the chain is invalid.
-- **Decide first:** the chain lives only in memory, so it's lost on restart. The tamper demo probably needs the chain saved to a file or a table (see Gaps).
+- For the demo, edit a block in the saved chain from #57 and show that the status reports it.
+
+### #56 GET /patients/:id/access-log route
+**Needs:** #13, #23.
+- Return who read or wrote this patient's journal, and when, built from the AccessEvents on the chain. Only allowed roles can call it.
+- Add user names from SQL on the server. Names are never stored on the chain.
 
 ### #42 Access log view
-**Needs:** an access log endpoint (see Gaps).
+**Needs:** #56.
 - The page placeholder already exists at `/patients/:id/access-log`. Show a table of who, which role, which action, and when.
 - The server adds user names from SQL. Names are never stored on the chain.
 
@@ -298,20 +322,8 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - Agree on the target, since the contract doesn't set one. Turn on `vitest --coverage` in both the frontend and the backend. Unit-test the chain logic and integration-test the routes.
 
 ### #46 Seed data and two-node demo script
-**Needs:** most of Phase 3.
+**Needs:** most of Phase 3, including #57.
 - One command (for example `npm run demo`) seeds the database, starts nodes 3001 and 3002, makes some reads, then tampers with a block so #41 detects it.
 
 ### #49 Presentation preparation
 - Slides and a rehearsed demo. A suggested flow: log in → search → open journal → access log → verification badge → start node 2 and watch it sync → tamper → detected.
-
----
-
-## Gaps: work with no issue yet
-
-Open issues for these, or add them to an existing issue, before the phase that needs them:
-
-1. **Patient search endpoint** `GET /api/patients?q=`, needed by #17 (Phase 1).
-2. **Access log endpoint** `GET /api/patients/:id/access-log`, needed by #42 (Phase 3).
-3. **Chain persistence:** the chain is lost on restart. #37, #41 and #46 all need it saved.
-4. **CI workflow:** #27 says "runs in CI", but there is no GitHub Actions workflow.
-5. **Notes across nodes:** if each node has its own database, #39 and #44 can't work without copying notes between nodes.
