@@ -8,8 +8,8 @@ Last checked against `main` on 2026-09-15 (commit `ecd6849`).
 1. Stay in the **current phase**. Don't start a later phase while the current one has open issues nobody is working on.
 2. Choose an issue that is **unassigned** and whose **Needs** issues are all merged.
 3. Assign yourself, move the card to **In progress**, and say so in Teams.
-4. Branch from `main` (`gh issue develop <nr> --checkout`), open a PR with `Closes #<nr>`, get it reviewed and merge it.
-5. Take the next issue only after the last one is merged.
+4. Pull `main` first (`git pull`), then commit and push to `main`. Put `Closes #<nr>` in the commit message so GitHub closes the issue by itself.
+5. Take the next issue only after the last one is pushed.
 
 Inside a phase, the issues are split into **lanes** (chain, backend, p2p, frontend). Lanes don't wait on each other unless an issue lists a Need, so four people can work at the same time, one per lane.
 
