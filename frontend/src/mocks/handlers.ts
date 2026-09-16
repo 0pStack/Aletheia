@@ -1,8 +1,7 @@
-import { http, HttpResponse } from 'msw'
+import { accessLogHandlers } from './handlers/accessLog'
+import { authHandlers } from './handlers/auth'
+import { patientHandlers } from './handlers/patients'
 
-// The session endpoint path is not agreed with the backend track yet (issue #11).
-export const handlers = [
-  http.get('*/api/auth/session', () =>
-    HttpResponse.json({ success: false, data: null, error: 'Not signed in' }, { status: 401 }),
-  ),
-]
+// Endpoint paths and shapes are not agreed with the backend track yet (issue #3);
+// see docs/current-work.md, sections #3 and #6, for what is assumed here.
+export const handlers = [...authHandlers, ...patientHandlers, ...accessLogHandlers]
