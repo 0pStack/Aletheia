@@ -33,7 +33,7 @@ describe('request', () => {
     const error: unknown = await request('/api/echo', okSchema).catch((caught: unknown) => caught)
 
     expect(error).toBeInstanceOf(ApiError)
-    expect(error).toMatchObject({ status: 0, cause: expect.any(Error) })
+    expect(error).toMatchObject({ status: 0, code: 'NETWORK_ERROR', cause: expect.any(Error) })
   })
 
   it('keeps the JSON parse error as the cause for a non-JSON body', async () => {
@@ -41,6 +41,22 @@ describe('request', () => {
 
     const error: unknown = await request('/api/echo', okSchema).catch((caught: unknown) => caught)
 
-    expect(error).toMatchObject({ status: 502, cause: expect.any(Error) })
+    expect(error).toMatchObject({ status: 502, code: 'INVALID_RESPONSE', cause: expect.any(Error) })
+  })
+
+  it('carries the server error code and message from an error envelope', async () => {
+    server.use(
+      http.get('*/api/echo', () =>
+        HttpResponse.json(
+          { success: false, data: null, error: { code: 'FORBIDDEN', message: 'Not allowed' } },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    const error: unknown = await request('/api/echo', okSchema).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 403, code: 'FORBIDDEN', message: 'Not allowed' })
   })
 })

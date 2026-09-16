@@ -12,7 +12,7 @@ import { routes } from './router'
 function signedIn() {
   return HttpResponse.json({
     success: true,
-    data: { id: 'u1', name: 'Dr. Berg', role: 'doctor' },
+    data: { id: 1, username: 'dr.berg', name: 'Dr. Berg', role: 'DOCTOR', patientId: null },
     error: null,
   })
 }

@@ -9,7 +9,17 @@ const loginBodySchema = z.object({
 })
 
 function toSessionUser(user: MockUser) {
-  return { id: user.id, name: user.name, role: user.role }
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    patientId: user.patientId,
+  }
+}
+
+function errorEnvelope(code: string, message: string) {
+  return { success: false as const, data: null, error: { code, message } }
 }
 
 async function readLoginBody(request: Request) {
@@ -21,10 +31,9 @@ export const authHandlers = [
   http.post('*/api/auth/login', async ({ request }) => {
     const body = await readLoginBody(request)
     if (!body.success) {
-      return HttpResponse.json(
-        { success: false, data: null, error: 'Malformed login request' },
-        { status: 400 },
-      )
+      return HttpResponse.json(errorEnvelope('BAD_REQUEST', 'Malformed login request'), {
+        status: 400,
+      })
     }
 
     const { username, password } = body.data
@@ -33,27 +42,28 @@ export const authHandlers = [
     )
     if (!user) {
       return HttpResponse.json(
-        { success: false, data: null, error: 'Invalid username or password' },
+        errorEnvelope('INVALID_CREDENTIALS', 'Invalid username or password'),
         { status: 401 },
       )
     }
 
     setCurrentSessionUserId(user.id)
-    return HttpResponse.json({ success: true, data: toSessionUser(user), error: null })
+    return HttpResponse.json({ success: true, data: { user: toSessionUser(user) }, error: null })
   }),
 
   http.post('*/api/auth/logout', () => {
     setCurrentSessionUserId(null)
-    return HttpResponse.json({ success: true, data: { ok: true }, error: null })
+    return HttpResponse.json({
+      success: true,
+      data: { message: 'Logged out successfully' },
+      error: null,
+    })
   }),
 
   http.get('*/api/auth/session', () => {
     const user = getCurrentSessionUser()
     if (!user) {
-      return HttpResponse.json(
-        { success: false, data: null, error: 'Not signed in' },
-        { status: 401 },
-      )
+      return HttpResponse.json(errorEnvelope('UNAUTHENTICATED', 'Not signed in'), { status: 401 })
     }
     return HttpResponse.json({ success: true, data: toSessionUser(user), error: null })
   }),

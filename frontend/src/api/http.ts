@@ -3,15 +3,18 @@ import { parseEnvelope } from './envelope'
 
 export class ApiError extends Error {
   readonly status: number
+  readonly code: string
 
-  constructor(status: number, message: string, options?: ErrorOptions) {
+  constructor(status: number, code: string, message: string, options?: ErrorOptions) {
     super(message, options)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
 const NETWORK_ERROR_STATUS = 0
+const NETWORK_ERROR_CODE = 'NETWORK_ERROR'
 
 type JsonBody = { ok: true; body: unknown } | { ok: false; cause: unknown }
 
@@ -37,14 +40,21 @@ export async function request<T>(
   try {
     response = await fetch(url, { ...init, headers, credentials: 'include' })
   } catch (cause) {
-    throw new ApiError(NETWORK_ERROR_STATUS, 'Could not reach the server', { cause })
+    throw new ApiError(NETWORK_ERROR_STATUS, NETWORK_ERROR_CODE, 'Could not reach the server', {
+      cause,
+    })
   }
 
   const json = await readJson(response)
   const result = parseEnvelope(json.ok ? json.body : null, dataSchema)
 
   if (!result.ok) {
-    throw new ApiError(response.status, result.error, json.ok ? undefined : { cause: json.cause })
+    throw new ApiError(
+      response.status,
+      result.error.code,
+      result.error.message,
+      json.ok ? undefined : { cause: json.cause },
+    )
   }
   return result.data
 }
