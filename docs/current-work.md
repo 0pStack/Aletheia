@@ -1,7 +1,7 @@
 # Current work
 
 What to work on, in what order, and what "done" looks like for each issue.
-Last checked against `main` on 2026-09-15 (commit `ecd6849`).
+Last checked against `main` on 2026-09-16 (commit `38f0b61`).
 
 ## How to pick an issue
 
@@ -19,11 +19,27 @@ This table matches the project board, [@Web3 - Alenthia Journal](https://github.
 
 | Board status | Issues |
 |--------------|--------|
-| Done | #1 backend folder and dependencies, #47 README, #48 group contract |
-| In Progress | All of Phase 0: #3 shapes (Anders), #4 whitelist, #5 SQL schema, #6 mock API, #7 lint and scripts (Ruslan) |
+| Done | #1 backend folder and dependencies, #47 README, #48 group contract, #3 shapes, #4 whitelist, #6 mock API, #7 lint and scripts |
+| In Progress | #5 SQL schema, the last open Phase 0 issue |
 | Todo | Everything else. #16 login page and #33 access denied page already have partial work on `main` |
 
-**None of the open issues is finished yet.** The frontend scaffold (PR #53) gave a head start on #6, #7, #16 and #33, but each still has work left, which is listed under the issue below. `backend/` has only a `package.json` so far and no source code.
+**Phase 0 is done except #5.** The contract is in `docs/interfaces.md`. `backend/` now has scripts, tests, lint and a health route, and the frontend mocks follow the contract, so #16, #17 and #18 can be built against them.
+
+### Open questions for #3
+
+The contract names only `INVALID_CREDENTIALS`. The mocks use these until the group agrees otherwise, so the real backend should match them or the mocks should change:
+
+| Status | Code | When |
+|--------|------|------|
+| 400 | `BAD_REQUEST` | Malformed request body |
+| 401 | `INVALID_CREDENTIALS` | Wrong username or password |
+| 401 | `UNAUTHENTICATED` | No session |
+| 403 | `FORBIDDEN` | Role or ownership doesn't allow it |
+| 404 | `NOT_FOUND` | Unknown patient |
+
+- `GET /api/auth/session` returns the user object itself, not `{ user }`.
+- A `PATIENT` asking for another patient's id gets 403 even if that patient doesn't exist, so ids can't be probed.
+- Access log entries have no `patientId`, as in the contract's example.
 
 ---
 
@@ -32,7 +48,7 @@ This table matches the project board, [@Web3 - Alenthia Journal](https://github.
 Almost everything else depends on this phase, so it comes first. Most of it is agreeing on things and writing them down, so it goes quickly when done together.
 
 ### #3 Agree AccessEvent, Block and API envelope shapes
-**Status:** in progress (Anders). **Blocks:** almost everything.
+**Status:** done (Anders), see `docs/interfaces.md`. **Blocks:** almost everything.
 - Create `docs/interfaces.md`.
 - **API envelope:** the frontend uses a placeholder `{ success, data, error }` in `frontend/src/api/envelope.ts`. Keep it or change it. If it changes, only that one file needs editing.
 - **AccessEvent:** list the fields, for example event id, user id, role, patient id (or its hash), action (`read` / `write` / `denied`), timestamp, node id and signature (signature arrives in #20).
@@ -42,27 +58,28 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 - Done when every track has approved the PR.
 
 ### #4 Define on-chain field whitelist (no patient data)
-**Needs:** #3 (can go in the same PR). **Blocks:** #13, #27.
+**Status:** done. **Needs:** #3 (can go in the same PR). **Blocks:** #13, #27.
 - In `docs/interfaces.md`, list exactly which AccessEvent fields may go on the chain: IDs, hashes, action, role, timestamp.
 - List what is forbidden: names, personnummer, note text, anything else from the journal.
 
 ### #5 Draft SQL schema: users, roles, patients, notes, sessions
 **Blocks:** #10.
-- The backend uses `better-sqlite3`, so write the schema for SQLite.
+- The backend uses `better-sqlite3` (pinned to 12.11, see the README), so write the schema for SQLite.
+- Match the roles, note visibility levels and numeric ids in `docs/interfaces.md`.
 - Tables: `users` (username, password hash, role), `patients`, `notes` (author, patient, text, **visibility**, created at), and sessions (or use a session store).
 - Commit an ER sketch and the `CREATE TABLE` statements (for example `backend/db/schema.sql`), then review them together.
 
 ### #6 Mock API layer matching the agreed envelope
-**Needs:** #3 for the real paths (you can start with assumed ones). **Blocks:** testing #16, #17, #18 without a backend.
-- **Already done (PR #53):** MSW is set up in `frontend/src/mocks/`, the envelope parser exists, and mocks are on by default in dev.
-- **Left:** only `GET /api/auth/session` is mocked. Add handlers with fake data for login, logout, patient search, patient + notes, and access log, including 401 and 403 responses.
+**Status:** done (Ruslan). **Blocks:** testing #16, #17, #18 without a backend.
+- Handlers in `frontend/src/mocks/handlers/` cover login, logout, session, patient search, patient + notes and the access log, with the access rules from #3. Test logins are in the README.
+- Not mocked yet: `POST /api/patients/:id/notes` and `GET /api/verify/:eventId`. Add them with the issues that build those pages.
 
 ### #7 Add npm scripts, ESLint and Prettier config
-**Status:** in progress (Ruslan). **Blocks:** every backend, chain and p2p issue, because they need a test runner.
-- **Already done:** the frontend has `dev`, `build`, `test`, `lint`, `format` and `typecheck`.
-- **Left in `backend/`:** `tsconfig.json`, a `src/` folder, `dev` (`tsx watch`), `test` (for example Vitest, to match the frontend), `lint`, and ESLint + Prettier config. The `test` script is still the npm placeholder.
-- Decide where chain and p2p code lives, for example `backend/src/chain/` and `backend/src/network/`.
-- Watch out: the backend uses TypeScript 7, and typescript-eslint doesn't support it yet. That's why the frontend pins TypeScript ~6.0.
+**Status:** done (Ruslan). **Blocks:** every backend, chain and p2p issue, because they need a test runner.
+- Both `frontend/` and `backend/` have `dev`, `build`, `test`, `lint`, `format` and `typecheck`. The scripts are listed in the README.
+- Both pin TypeScript ~6.0, because typescript-eslint doesn't support TypeScript 7 yet.
+- `.gitattributes` keeps LF line endings on Windows, so `format:check` passes after a fresh clone.
+- Still to decide as a group: where chain and p2p code lives, for example `backend/src/chain/` and `backend/src/network/`.
 
 ---
 
@@ -99,7 +116,7 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 ### #11 Session-based login
 **Needs:** #10, #7.
 - `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/session`.
-- The session response must match `frontend/src/api/schemas.ts` (`id, name, role`) or whatever #3 agrees on.
+- Responses must match `docs/interfaces.md` and `frontend/src/api/schemas.ts`: login returns `{ user }`, where the user is `id, username, name, role, patientId`. Use the error codes under "Open questions for #3".
 - Use an `express-session` cookie with `httpOnly` and `sameSite`. Compare passwords with `timingSafeEqual`.
 - The Vite dev server proxies `/api` to port 3001, so no CORS setup is needed.
 

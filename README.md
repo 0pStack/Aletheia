@@ -9,7 +9,21 @@ From the project root:
 ```bash
 cd backend
 npm install
+npm run dev
 ```
+
+The server listens on http://localhost:3001 (set `PORT` to change it). `GET /api/health` answers when it is up.
+
+| Script | What it does |
+|--------|--------------|
+| `npm run dev` | Start with reload on save (`tsx watch`) |
+| `npm test` | Run the Vitest tests once (`npm run test:watch` to keep watching) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check without building |
+| `npm run format` / `format:check` | Prettier |
+| `npm run build` / `npm start` | Compile to `dist/` and run it |
+
+`better-sqlite3` is pinned to 12.11 because version 13 compiles from source on install, which fails on Windows without Visual Studio Build Tools. Don't upgrade it until 13 ships prebuilt install binaries again.
 
 ## Frontend setup
 
@@ -29,6 +43,18 @@ The dev server runs on http://localhost:5173 and proxies `/api` and `/ws` to `VI
 |----------|---------|---------|
 | `VITE_USE_MOCKS` | `true` in dev | Set to `false` to call the real backend instead of the MSW mocks in `src/mocks/` |
 | `VITE_API_TARGET` | `http://localhost:3001` | Backend node to proxy to (3001 or 3002) |
+
+### Mock logins
+
+With mocks on, these fake users exist (password `hunter2` for all). Shapes and access rules follow [docs/interfaces.md](docs/interfaces.md).
+
+| Username | Role | Can do |
+|----------|------|--------|
+| `dr.berg` | `DOCTOR` | Search, view any patient, access logs |
+| `n.svensson` | `NURSE` | Same as doctor |
+| `clinic.vasa` | `CLINIC` | Same as doctor |
+| `a.lindqvist` | `PATIENT` | Only own record (patient 101) and its access log, `ALL` notes only |
+| `k.holm` | `UNAUTHORIZED` | Nothing, every patient route returns 403 |
 
 Checks that must pass before a PR:
 
