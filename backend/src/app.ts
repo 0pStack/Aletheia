@@ -1,11 +1,38 @@
+import type { Database as DatabaseType } from 'better-sqlite3'
 import express, { type Express } from 'express'
+import session from 'express-session'
+import { createAuthRouter } from './auth.routes.js'
+import { db as defaultDb } from './db.js'
 
-export function createApp(): Express {
+export interface CreateAppOptions {
+  db?: DatabaseType
+}
+
+export function createApp(options: CreateAppOptions = {}): Express {
+  const db = options.db ?? defaultDb
   const app = express()
+
+  app.use(express.json())
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET ?? 'dev-only-insecure-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,
+        maxAge: 8 * 60 * 60 * 1000,
+      },
+    }),
+  )
 
   app.get('/api/health', (_req, res) => {
     res.json({ success: true, data: { status: 'ok' }, error: null })
   })
+
+  app.use('/api/auth', createAuthRouter(db))
 
   return app
 }
