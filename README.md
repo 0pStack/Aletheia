@@ -56,6 +56,23 @@ With mocks on, these fake users exist (password `hunter2` for all). Shapes and a
 | `a.lindqvist` | `PATIENT` | Only own record (patient 101) and its access log, `ALL` notes only |
 | `k.holm` | `UNAUTHORIZED` | Nothing, every patient route returns 403 |
 
+## Test Accounts (Seed Data)
+
+All seeded test accounts use the password: `Password123!`
+
+| Username | Role | Linked Patient | Purpose / Access |
+| :--- | :--- | :--- | :--- |
+| `doctor_dr_house` | `DOCTOR` | None | Reads/writes notes, sees `ALL`, `STAFF`, and own `PRIVATE` notes |
+| `nurse_jackie` | `NURSE` | None | Reads/writes notes, sees `ALL`, `STAFF` notes |
+| `clinic_admin` | `CLINIC` | None | Administrative overview / access |
+| `patient_anna` | `PATIENT` | Anna Andersson | Reads only `ALL` visibility notes for own record |
+| `unauth_user` | `UNAUTHORIZED` | None | Blocked / unverified account testing |
+
+Run the seed script from the `backend/` directory:
+```bash
+npm run db:seed
+```
+
 Checks that must pass before a PR:
 
 ```bash
