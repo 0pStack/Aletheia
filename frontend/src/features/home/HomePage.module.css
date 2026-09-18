@@ -1,0 +1,179 @@
+/* The frost scene fills the viewport behind the whole page; the section after the hero sits on
+   it as smoked glass, like the sign-in panel sits on the liquid. */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  /* Shown until the first frame, and for good without WebGL: the scene's own sky. */
+  background: linear-gradient(to top, oklch(0.84 0.06 85), oklch(0.7 0.03 150));
+}
+
+/* Type sits in the sky, above the range, where the scene is calm and light. */
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--header-height));
+  padding: clamp(var(--space-12), 14vh, 9rem) clamp(var(--space-6), 6vw, 6rem) var(--space-12);
+  color: var(--color-obsidian);
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--color-obsidian) 72%, transparent);
+}
+
+.name {
+  max-width: 14ch;
+  margin-top: var(--space-4);
+  font-size: var(--text-hero);
+  font-weight: var(--weight-light);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.lead {
+  max-width: 38ch;
+  margin-top: var(--space-8);
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-12);
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-obsidian);
+  color: var(--color-paper);
+  font-size: var(--text-md);
+  text-decoration: none;
+  transition: background-color var(--duration-ui) var(--ease-glide);
+}
+
+.action:hover {
+  background: var(--color-inkstone);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--color-obsidian);
+  outline-offset: 3px;
+}
+
+.arrow {
+  display: inline-block;
+  transition: transform calc(var(--duration-ui) * 2) var(--ease-glide);
+}
+
+.action:hover .arrow {
+  transform: translateX(0.3rem);
+}
+
+.log {
+  /* Same smoked glass as the sign-in panel, so the text and border tokens flip to light here. */
+  --color-text: var(--color-paper);
+  --color-text-muted: color-mix(in oklch, var(--color-paper) 78%, transparent);
+
+  position: relative;
+  padding: clamp(var(--space-12), 12vh, 8rem) clamp(var(--space-6), 6vw, 6rem);
+  color: var(--color-text);
+  background: color-mix(in oklch, var(--color-obsidian) 58%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--color-paper) 10%, transparent);
+  backdrop-filter: blur(32px) saturate(1.2);
+}
+
+/* The sheen along the top edge of the sign-in panel. */
+.log::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--color-paper) 55%, transparent) 50%,
+    transparent
+  );
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .log {
+    background: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
+  }
+}
+
+.logHeading {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-light);
+  letter-spacing: -0.02em;
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-12) var(--space-16);
+  margin-top: var(--space-12);
+  padding: 0;
+  list-style: none;
+  counter-reset: fact;
+}
+
+@media (min-width: 900px) {
+  .facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.fact {
+  counter-increment: fact;
+  max-width: 34ch;
+}
+
+.fact::before {
+  content: counter(fact, decimal-leading-zero);
+  display: block;
+  margin-bottom: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.factTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-heading);
+}
+
+.factBody {
+  margin-top: var(--space-3);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+/* One entrance, only when arriving through the dive (the app shell marks that on <main>): the
+   type rises out of the scene. Ordinary visits to this page load straight into the task. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-settle-in] .hero > * {
+    animation: rise 1100ms var(--ease-glide) 150ms backwards;
+  }
+
+  [data-settle-in] .hero > :nth-child(2) {
+    animation-delay: 240ms;
+  }
+
+  [data-settle-in] .hero > :nth-child(3) {
+    animation-delay: 350ms;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+}

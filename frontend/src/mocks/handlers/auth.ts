@@ -42,7 +42,7 @@ export const authHandlers = [
     )
     if (!user) {
       return HttpResponse.json(
-        errorEnvelope('INVALID_CREDENTIALS', 'Invalid username or password'),
+        errorEnvelope('INVALID_CREDENTIALS', 'Wrong username or password.'),
         { status: 401 },
       )
     }

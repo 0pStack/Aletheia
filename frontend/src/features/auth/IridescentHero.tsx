@@ -9,15 +9,20 @@ const LETTER_STAGGER_MS = 55
 
 interface IridescentHeroProps {
   className?: string
+  diving?: boolean
 }
 
-export function IridescentHero({ className }: IridescentHeroProps) {
+export function IridescentHero({ className, diving = false }: IridescentHeroProps) {
   const heroRef = useRef<HTMLDivElement>(null)
   usePointerGlow(heroRef)
 
   return (
-    <div ref={heroRef} className={className ? `${styles.hero} ${className}` : styles.hero}>
-      <LiquidCanvas className={styles.liquid} />
+    <div
+      ref={heroRef}
+      className={className ? `${styles.hero} ${className}` : styles.hero}
+      data-diving={diving || undefined}
+    >
+      <LiquidCanvas className={styles.liquid} diving={diving} />
       <RotatingBadge className={styles.badge} />
       <div className={styles.text}>
         <p className={styles.wordmark} aria-hidden="true" data-wordmark>

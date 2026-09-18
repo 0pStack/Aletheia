@@ -1,6 +1,7 @@
-import { Navigate, type RouteObject } from 'react-router'
+import type { RouteObject } from 'react-router'
 import { AccessLogPage } from '../features/access-log/AccessLogPage'
 import { LoginPage } from '../features/auth/LoginPage'
+import { HomePage } from '../features/home/HomePage'
 import { JournalPage } from '../features/journal/JournalPage'
 import { PatientSearchPage } from '../features/patients/PatientSearchPage'
 import { RequireAuth } from './guards/RequireAuth'
@@ -16,7 +17,7 @@ export const routes: RouteObject[] = [
       {
         element: <AppLayout />,
         children: [
-          { index: true, element: <Navigate to="/patients" replace /> },
+          { index: true, element: <HomePage /> },
           { path: '/patients', element: <PatientSearchPage /> },
           { path: '/patients/:patientId', element: <JournalPage /> },
           { path: '/patients/:patientId/access-log', element: <AccessLogPage /> },

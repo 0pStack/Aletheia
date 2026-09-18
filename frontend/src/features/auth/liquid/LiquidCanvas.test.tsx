@@ -80,6 +80,33 @@ describe('LiquidCanvas', () => {
     expect(container.querySelector('canvas')).toHaveAttribute('data-state', 'ready')
   })
 
+  it('holds the dive at zero until asked, then follows the clock up to fully inside', () => {
+    stubMotionPreference(true)
+    const renderer = fakeRenderer()
+    mockedCreateRenderer.mockReturnValue(renderer)
+    const queued: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      queued.push(callback)
+      return queued.length
+    })
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+    const start = performance.now()
+    const diveOfFrame = (index: number) => vi.mocked(renderer.render).mock.calls[index]?.[0].dive
+
+    const { rerender } = render(<LiquidCanvas />)
+    queued.shift()?.(start + 16)
+    rerender(<LiquidCanvas diving />)
+    queued.shift()?.(start + 48)
+    queued.shift()?.(start + 400)
+    queued.shift()?.(start + 800)
+    queued.shift()?.(start + 60_000)
+
+    expect(diveOfFrame(0)).toBe(0)
+    expect(diveOfFrame(2)).toBeGreaterThan(0)
+    expect(diveOfFrame(3)).toBeGreaterThan(diveOfFrame(2) ?? 1)
+    expect(diveOfFrame(4)).toBe(1)
+  })
+
   it('releases the WebGL resources on unmount', () => {
     stubMotionPreference(false)
     const renderer = fakeRenderer()

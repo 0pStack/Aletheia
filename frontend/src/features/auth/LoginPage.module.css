@@ -98,6 +98,48 @@
   }
 }
 
+/* The dive: everything in front of the liquid lets go first, then the shader travels through
+   the lens and comes out in the frost scene of the landing page. The veil, in that scene's
+   sky colours, is the stand-in wherever the full dive does not play: the brief version used
+   after the first sign in of a session, reduced motion, no WebGL, and mobile, where the
+   canvas covers only the hero. */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to top, oklch(0.84 0.06 85), oklch(0.7 0.03 150));
+  opacity: 0;
+}
+
+.page[data-diving] .veil {
+  opacity: 1;
+  transition: opacity 250ms linear;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .formPanel {
+    transition:
+      opacity 520ms var(--ease-glide),
+      transform 900ms var(--ease-glide);
+  }
+
+  .page[data-diving='full'] .formPanel {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+
+  .page[data-diving='full'] .veil {
+    transition: opacity 500ms cubic-bezier(0.55, 0, 0.8, 0.4) 1450ms;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 768px) {
+  .page[data-diving='full']:not(:has(canvas[data-state='fallback'])) .veil {
+    opacity: 0;
+  }
+}
+
 .heading {
   font-size: clamp(2.25rem, 3.4vw, 3.25rem);
   font-weight: var(--weight-light);
@@ -113,6 +155,26 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+}
+
+/* Always in the layout with room for one line, so a message neither shifts the button nor
+   changes which child it is. The negative margins take back most of the extra flex gap. */
+.error {
+  box-sizing: content-box;
+  min-height: calc(var(--text-sm) * var(--leading-body));
+  margin-block: calc(var(--space-4) * -1);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-text);
+  background: color-mix(in oklch, var(--color-iridescent-amber) 16%, transparent);
+  outline: 1px solid color-mix(in oklch, var(--color-iridescent-amber) 45%, transparent);
+  outline-offset: -1px;
+}
+
+.error:empty {
+  background: none;
+  outline-color: transparent;
 }
 
 .submit {
@@ -162,7 +224,7 @@
     animation-delay: 660ms;
   }
 
-  .form > :nth-child(3) {
+  .form > :nth-child(4) {
     animation-delay: 760ms;
   }
 

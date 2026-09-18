@@ -25,11 +25,11 @@
   transition: transform calc(var(--duration-ui) * 2.25) var(--ease-glide);
 }
 
-.button:hover:not(:disabled) {
+.button:hover:not(:disabled, [aria-disabled='true']) {
   color: var(--color-paper);
 }
 
-.button:hover:not(:disabled)::before {
+.button:hover:not(:disabled, [aria-disabled='true'])::before {
   transform: translateY(0);
 }
 
@@ -44,15 +44,16 @@
   background: oklch(0.88 0.006 80);
 }
 
-.solid:hover:not(:disabled) {
+.solid:hover:not(:disabled, [aria-disabled='true']) {
   color: var(--color-obsidian);
 }
 
-.button:active:not(:disabled) {
+.button:active:not(:disabled, [aria-disabled='true']) {
   transform: scale(0.97);
 }
 
-.button:disabled {
+.button:disabled,
+.button[aria-disabled='true'] {
   border-color: var(--color-border-input);
   color: var(--color-text-muted);
   cursor: not-allowed;

@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { allowsMotion } from '../../../shared/motion/allowsMotion'
+import { DIVE_MS } from '../useDive'
 import { createLiquidRenderer, type LiquidRenderer } from './createLiquidRenderer'
 import styles from './LiquidCanvas.module.css'
 
@@ -7,17 +9,19 @@ const MAX_PIXEL_RATIO = 1.25
 const REVEAL_MS = 2400
 const STILL_FRAME_TIME = 18
 const POINTER_FOLLOW = 0.05
+const SCROLL_FOLLOW = 0.08
 const MAX_FRAME_STEP_S = 0.05
+
+// The field's clock and pointer offset outlive any one canvas, so the app's canvas picks up on
+// the exact frame the login's canvas ended on instead of jumping to a different pattern.
+const carried = { time: 0, pointerX: 0, pointerY: 0 }
 
 interface LiquidCanvasProps {
   className?: string
-}
-
-function allowsMotion(): boolean {
-  return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: no-preference)').matches
-  )
+  /** night is the login's liquid; frost is the mountain scene the dive arrives in. */
+  scene?: 'night' | 'frost'
+  /** Pushes the viewpoint into the lens over DIVE_MS. One way: the page leaves when it ends. */
+  diving?: boolean
 }
 
 function easeOutCubic(progress: number): number {
@@ -43,8 +47,13 @@ function sizeToElement(renderer: LiquidRenderer, canvas: HTMLCanvasElement) {
   renderer.resize(rect.width, rect.height, pixelRatio)
 }
 
-export function LiquidCanvas({ className }: LiquidCanvasProps) {
+export function LiquidCanvas({ className, scene = 'night', diving = false }: LiquidCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const divingRef = useRef(diving)
+
+  useEffect(() => {
+    divingRef.current = diving
+  }, [diving])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -57,6 +66,7 @@ export function LiquidCanvas({ className }: LiquidCanvasProps) {
     }
 
     sizeToElement(renderer, canvas)
+    const light = scene === 'frost' ? 1 : 0
 
     if (!allowsMotion()) {
       const drawStill = () => {
@@ -68,6 +78,9 @@ export function LiquidCanvas({ className }: LiquidCanvasProps) {
           reveal: 1,
           lensX: lens.x,
           lensY: lens.y,
+          dive: 0,
+          light,
+          scroll: 0,
         })
       }
       drawStill()
@@ -86,29 +99,45 @@ export function LiquidCanvas({ className }: LiquidCanvasProps) {
       }
     }
 
-    const pointerTarget = { x: 0, y: 0 }
-    const pointer = { x: 0, y: 0 }
+    const pointerTarget = { x: carried.pointerX, y: carried.pointerY }
+    const pointer = { x: carried.pointerX, y: carried.pointerY }
     let lens = readLensCenter(canvas)
-    let elapsed = 0
+    let elapsed = carried.time
+    let scroll = 0
+    const startedAt = elapsed
+    // Wall clock, not accumulated frame steps: the page leaves on a timer, so a slow GPU must
+    // skip ahead rather than fall behind it.
+    let diveStartedAt: number | null = null
     let lastNow = performance.now()
     let frame = 0
     let running = false
     let onScreen = true
 
     const draw = (now: number) => {
-      elapsed += Math.min(Math.max(now - lastNow, 0) / 1000, MAX_FRAME_STEP_S)
+      const step = Math.min(Math.max(now - lastNow, 0) / 1000, MAX_FRAME_STEP_S)
+      elapsed += step
       lastNow = now
+      if (divingRef.current) diveStartedAt ??= now
+      const diveProgress = diveStartedAt === null ? 0 : Math.min((now - diveStartedAt) / DIVE_MS, 1)
       pointer.x += (pointerTarget.x - pointer.x) * POINTER_FOLLOW
       pointer.y += (pointerTarget.y - pointer.y) * POINTER_FOLLOW
+      const scrollTarget = Math.min(Math.max(window.scrollY / window.innerHeight, 0), 1)
+      scroll += (scrollTarget - scroll) * SCROLL_FOLLOW
 
       renderer.render({
         time: elapsed,
         pointerX: pointer.x,
         pointerY: pointer.y,
-        reveal: easeOutCubic(Math.min((elapsed * 1000) / REVEAL_MS, 1)),
+        reveal: easeOutCubic(Math.min(((elapsed - startedAt) * 1000) / REVEAL_MS, 1)),
         lensX: lens.x,
         lensY: lens.y,
+        dive: diveProgress,
+        light,
+        scroll,
       })
+      carried.time = elapsed
+      carried.pointerX = pointer.x
+      carried.pointerY = pointer.y
       canvas.dataset.state = 'ready'
       if (running) frame = requestAnimationFrame(draw)
     }
@@ -175,7 +204,7 @@ export function LiquidCanvas({ className }: LiquidCanvasProps) {
       canvas.removeEventListener('webglcontextlost', onContextLost)
       renderer.dispose()
     }
-  }, [])
+  }, [scene])
 
   return (
     <canvas

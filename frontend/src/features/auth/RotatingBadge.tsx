@@ -1,6 +1,6 @@
 import styles from './RotatingBadge.module.css'
 
-const BADGE_TEXT = 'Every access · Logged on-chain · '
+const BADGE_TEXT = 'Every access · Logged for good · '
 const CIRCLE_PATH = 'M 60,60 m -46,0 a 46,46 0 1,1 92,0 a 46,46 0 1,1 -92,0'
 
 interface RotatingBadgeProps {

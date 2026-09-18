@@ -30,6 +30,7 @@ function renderAt(path: string) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  return router
 }
 
 describe('app routes', () => {
@@ -45,6 +46,32 @@ describe('app routes', () => {
     renderAt('/patients')
 
     expect(await screen.findByRole('heading', { name: /patients/i })).toBeInTheDocument()
+  })
+
+  it('greets a signed-in user by name on the landing page with a way into their task', async () => {
+    server.use(http.get('*/api/auth/session', signedIn))
+
+    renderAt('/')
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Dr. Gregory House' }),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: /search patients/i })).toHaveAttribute(
+      'href',
+      '/patients',
+    )
+  })
+
+  it('signs the user out and returns to the sign-in page', async () => {
+    server.use(http.get('*/api/auth/session', signedIn))
+    const router = renderAt('/patients')
+    await screen.findByRole('heading', { name: /patients/i })
+
+    await userEvent.click(screen.getByRole('button', { name: /sign out/i }))
+
+    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument()
+    // No remembered page: the next person to sign in here must not land on this user's screen.
+    expect(router.state.location.state).toBeNull()
   })
 
   it('announces that the session is being checked', async () => {

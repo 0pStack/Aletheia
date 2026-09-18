@@ -3,6 +3,9 @@ import { z } from 'zod'
 export const roleSchema = z.enum(['DOCTOR', 'NURSE', 'CLINIC', 'PATIENT', 'UNAUTHORIZED'])
 export type Role = z.infer<typeof roleSchema>
 
+// Roles that may search and open any patient; a PATIENT only ever reaches their own record.
+export const STAFF_ROLES: readonly Role[] = ['DOCTOR', 'NURSE', 'CLINIC']
+
 export const sessionUserSchema = z.object({
   id: z.number(),
   username: z.string(),

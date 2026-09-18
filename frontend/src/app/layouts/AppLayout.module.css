@@ -53,3 +53,43 @@
   margin-inline: auto;
   padding: var(--space-12) var(--space-6);
 }
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+button.navLink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.main[data-full-bleed] {
+  max-width: none;
+  padding: 0;
+}
+
+/* Arriving from the login dive: the shell settles in instead of snapping in. The landing page
+   is excluded because it holds the scene the dive ends on, which must not fade or move; it
+   staggers its own type instead. */
+@media (prefers-reduced-motion: no-preference) {
+  .header[data-settle-in],
+  .main[data-settle-in]:not([data-full-bleed]) {
+    animation: settleIn 900ms var(--ease-glide) backwards;
+  }
+
+  .main[data-settle-in]:not([data-full-bleed]) {
+    animation-delay: 120ms;
+  }
+}
+
+@keyframes settleIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}

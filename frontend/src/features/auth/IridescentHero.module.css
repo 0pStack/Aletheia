@@ -141,6 +141,21 @@
   }
 }
 
+/* During the dive the type lets go so only the liquid and the lens remain, and the oxblood
+   wash lifts because the frost scene on the far side does not carry it. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero[data-diving]::after {
+    opacity: 0;
+    transition: opacity 1100ms var(--ease-glide) 500ms;
+  }
+
+  .hero[data-diving] .badge,
+  .hero[data-diving] .text {
+    opacity: 0;
+    transition: opacity 480ms var(--ease-glide);
+  }
+}
+
 @keyframes letterIn {
   from {
     opacity: 0;

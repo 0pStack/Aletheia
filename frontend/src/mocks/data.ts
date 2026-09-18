@@ -1,10 +1,10 @@
-import type { Role } from '../api/schemas'
+import { STAFF_ROLES, type Role } from '../api/schemas'
 
 // Fake data for the mock API, aligned with the contract agreed in issue #3
 // (docs/interfaces.md). Users, patients and notes mirror backend/db/seed.ts on a
 // fresh database, so the same logins and ids work with mocks on or off.
 
-export const STAFF_ROLES: readonly Role[] = ['DOCTOR', 'NURSE', 'CLINIC']
+export { STAFF_ROLES }
 
 export interface MockUser {
   readonly id: number
