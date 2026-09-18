@@ -46,15 +46,7 @@ The dev server runs on http://localhost:5173 and proxies `/api` and `/ws` to `VI
 
 ### Mock logins
 
-With mocks on, these fake users exist (password `hunter2` for all). Shapes and access rules follow [docs/interfaces.md](docs/interfaces.md).
-
-| Username | Role | Can do |
-|----------|------|--------|
-| `dr.berg` | `DOCTOR` | Search, view any patient, access logs |
-| `n.svensson` | `NURSE` | Same as doctor |
-| `clinic.vasa` | `CLINIC` | Same as doctor |
-| `a.lindqvist` | `PATIENT` | Only own record (patient 101) and its access log, `ALL` notes only |
-| `k.holm` | `UNAUTHORIZED` | Nothing, every patient route returns 403 |
+The mock data in `src/mocks/data.ts` mirrors `backend/db/seed.ts`, so the [seed accounts](#test-accounts-seed-data) below work with mocks on or off. Shapes and access rules follow [docs/interfaces.md](docs/interfaces.md). If the seed changes, update the mocks to match.
 
 ## Test Accounts (Seed Data)
 
@@ -72,6 +64,8 @@ Run the seed script from the `backend/` directory:
 ```bash
 npm run db:seed
 ```
+
+The database file `backend/db/aletheia.db` is gitignored: it is generated output, and every login writes to it. What is versioned is the recipe, `db/schema.sql` and `db/seed.ts`. After cloning, the file is empty until you run the seed, so logins against the real backend fail before that. To reset, stop the backend, delete `aletheia.db` and seed again. Deleting matters because re-seeding an existing file clears the rows but keeps counting ids upward, and the frontend mocks assume the ids of a fresh database (users 1-5, patients 1-3).
 
 Checks that must pass before a PR:
 

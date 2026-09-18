@@ -29,7 +29,7 @@ describe('GET /api/patients', () => {
   })
 
   it('is 403 FORBIDDEN for a PATIENT', async () => {
-    await login('a.lindqvist', 'hunter2')
+    await login('patient_anna', 'Password123!')
 
     const error: unknown = await request('/api/patients', patientListSchema).catch(
       (caught: unknown) => caught,
@@ -40,7 +40,7 @@ describe('GET /api/patients', () => {
   })
 
   it('is 403 FORBIDDEN for UNAUTHORIZED', async () => {
-    await login('k.holm', 'hunter2')
+    await login('unauth_user', 'Password123!')
 
     const error: unknown = await request('/api/patients', patientListSchema).catch(
       (caught: unknown) => caught,
@@ -51,7 +51,7 @@ describe('GET /api/patients', () => {
   })
 
   it('returns every patient when q is empty', async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
     const results = await request('/api/patients', patientListSchema)
 
@@ -59,27 +59,25 @@ describe('GET /api/patients', () => {
   })
 
   it('searches by name, case-insensitively', async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
-    const results = await request('/api/patients?q=astrid', patientListSchema)
+    const results = await request('/api/patients?q=anna', patientListSchema)
 
-    expect(results).toEqual([
-      { id: 101, name: 'Astrid Lindqvist', personalNumber: '19000101-0001' },
-    ])
+    expect(results).toEqual([{ id: 1, name: 'Anna Andersson', personalNumber: '19850101-1234' }])
   })
 
   it('searches by personal number', async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
-    const results = await request('/api/patients?q=19000101-0002', patientListSchema)
+    const results = await request('/api/patients?q=19700512-5678', patientListSchema)
 
-    expect(results).toEqual([{ id: 102, name: 'Bo Forsberg', personalNumber: '19000101-0002' }])
+    expect(results).toEqual([{ id: 2, name: 'Bengt Berg', personalNumber: '19700512-5678' }])
   })
 })
 
 describe('GET /api/patients/:id', () => {
   it('is 401 UNAUTHENTICATED when nobody is signed in', async () => {
-    const error: unknown = await request('/api/patients/101', patientDetailSchema).catch(
+    const error: unknown = await request('/api/patients/1', patientDetailSchema).catch(
       (caught: unknown) => caught,
     )
 
@@ -88,9 +86,9 @@ describe('GET /api/patients/:id', () => {
   })
 
   it('is 403 FORBIDDEN for UNAUTHORIZED', async () => {
-    await login('k.holm', 'hunter2')
+    await login('unauth_user', 'Password123!')
 
-    const error: unknown = await request('/api/patients/101', patientDetailSchema).catch(
+    const error: unknown = await request('/api/patients/1', patientDetailSchema).catch(
       (caught: unknown) => caught,
     )
 
@@ -99,9 +97,9 @@ describe('GET /api/patients/:id', () => {
   })
 
   it('is 403 FORBIDDEN for a PATIENT requesting another patient id', async () => {
-    await login('a.lindqvist', 'hunter2')
+    await login('patient_anna', 'Password123!')
 
-    const error: unknown = await request('/api/patients/102', patientDetailSchema).catch(
+    const error: unknown = await request('/api/patients/2', patientDetailSchema).catch(
       (caught: unknown) => caught,
     )
 
@@ -110,14 +108,14 @@ describe('GET /api/patients/:id', () => {
   })
 
   it('gives staff STAFF and ALL notes, plus their own PRIVATE notes only', async () => {
-    await login('n.svensson', 'hunter2')
+    await login('nurse_jackie', 'Password123!')
 
-    const detail = await request('/api/patients/101', patientDetailSchema)
+    const detail = await request('/api/patients/1', patientDetailSchema)
 
     expect(detail.patient).toEqual({
-      id: 101,
-      name: 'Astrid Lindqvist',
-      personalNumber: '19000101-0001',
+      id: 1,
+      name: 'Anna Andersson',
+      personalNumber: '19850101-1234',
     })
     expect(detail.notes.some((note) => note.visibility === 'STAFF')).toBe(true)
     expect(detail.notes.some((note) => note.visibility === 'ALL')).toBe(true)
@@ -125,9 +123,9 @@ describe('GET /api/patients/:id', () => {
   })
 
   it("includes the caller's own PRIVATE notes for staff", async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
-    const detail = await request('/api/patients/101', patientDetailSchema)
+    const detail = await request('/api/patients/1', patientDetailSchema)
 
     expect(detail.notes.some((note) => note.visibility === 'PRIVATE' && note.authorId === 1)).toBe(
       true,
@@ -135,21 +133,21 @@ describe('GET /api/patients/:id', () => {
   })
 
   it('returns only ALL-visibility notes for the matching PATIENT', async () => {
-    await login('a.lindqvist', 'hunter2')
+    await login('patient_anna', 'Password123!')
 
-    const detail = await request('/api/patients/101', patientDetailSchema)
+    const detail = await request('/api/patients/1', patientDetailSchema)
 
     expect(detail.patient).toEqual({
-      id: 101,
-      name: 'Astrid Lindqvist',
-      personalNumber: '19000101-0001',
+      id: 1,
+      name: 'Anna Andersson',
+      personalNumber: '19850101-1234',
     })
     expect(detail.notes.length).toBeGreaterThan(0)
     expect(detail.notes.every((note) => note.visibility === 'ALL')).toBe(true)
   })
 
   it('is 404 NOT_FOUND for an unknown patient id', async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
     const error: unknown = await request('/api/patients/9999', patientDetailSchema).catch(
       (caught: unknown) => caught,

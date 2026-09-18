@@ -64,8 +64,8 @@ describe('LoginPage', () => {
     const form = container.querySelector('form')
     if (!form) throw new Error('Expected a form element')
 
-    await user.type(screen.getByLabelText('Username'), 'dr.berg')
-    await user.type(screen.getByLabelText('Password'), 'hunter2')
+    await user.type(screen.getByLabelText('Username'), 'doctor_dr_house')
+    await user.type(screen.getByLabelText('Password'), 'Password123!')
 
     const notPrevented = fireEvent.submit(form)
 

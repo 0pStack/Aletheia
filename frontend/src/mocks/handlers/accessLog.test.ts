@@ -20,7 +20,7 @@ function login(username: string, password: string) {
 
 describe('GET /api/patients/:id/access-log', () => {
   it('is 401 UNAUTHENTICATED when nobody is signed in', async () => {
-    const error: unknown = await request('/api/patients/101/access-log', accessLogListSchema).catch(
+    const error: unknown = await request('/api/patients/1/access-log', accessLogListSchema).catch(
       (caught: unknown) => caught,
     )
 
@@ -29,9 +29,9 @@ describe('GET /api/patients/:id/access-log', () => {
   })
 
   it('is 403 FORBIDDEN for UNAUTHORIZED', async () => {
-    await login('k.holm', 'hunter2')
+    await login('unauth_user', 'Password123!')
 
-    const error: unknown = await request('/api/patients/101/access-log', accessLogListSchema).catch(
+    const error: unknown = await request('/api/patients/1/access-log', accessLogListSchema).catch(
       (caught: unknown) => caught,
     )
 
@@ -40,9 +40,9 @@ describe('GET /api/patients/:id/access-log', () => {
   })
 
   it('is 403 FORBIDDEN for a PATIENT requesting another patient id', async () => {
-    await login('a.lindqvist', 'hunter2')
+    await login('patient_anna', 'Password123!')
 
-    const error: unknown = await request('/api/patients/102/access-log', accessLogListSchema).catch(
+    const error: unknown = await request('/api/patients/2/access-log', accessLogListSchema).catch(
       (caught: unknown) => caught,
     )
 
@@ -51,24 +51,24 @@ describe('GET /api/patients/:id/access-log', () => {
   })
 
   it('returns the events for that patient to staff', async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
-    const entries = await request('/api/patients/101/access-log', accessLogListSchema)
+    const entries = await request('/api/patients/1/access-log', accessLogListSchema)
 
     expect(entries.length).toBeGreaterThan(0)
     expect(entries.every((entry) => typeof entry.eventId === 'string')).toBe(true)
   })
 
   it('returns the events for the matching PATIENT', async () => {
-    await login('a.lindqvist', 'hunter2')
+    await login('patient_anna', 'Password123!')
 
-    const entries = await request('/api/patients/101/access-log', accessLogListSchema)
+    const entries = await request('/api/patients/1/access-log', accessLogListSchema)
 
     expect(entries.length).toBeGreaterThan(0)
   })
 
   it('is 404 NOT_FOUND for an unknown patient id', async () => {
-    await login('dr.berg', 'hunter2')
+    await login('doctor_dr_house', 'Password123!')
 
     const error: unknown = await request(
       '/api/patients/9999/access-log',
