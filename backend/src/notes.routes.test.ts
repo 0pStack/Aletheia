@@ -7,6 +7,7 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
 import { hashPassword } from './auth.js'
+import { Blockchain } from './blockchain.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../db/schema.sql')
@@ -16,6 +17,7 @@ let db: DatabaseType
 let app: Express
 let patientId: number
 let otherPatientId: number
+let blockchain: Blockchain
 
 beforeAll(() => {
   db = new Database(':memory:')
@@ -56,7 +58,9 @@ beforeAll(() => {
     VALUES (?, ?, ?, ?, ?)`,
   ).run('patient_anna', hashPassword(PASSWORD), 'Anna Andersson', 'PATIENT', patientId)
 
-  app = createApp({ db })
+  blockchain = new Blockchain()
+
+  app = createApp({ db, blockchain })
 })
 
 afterAll(() => {
@@ -210,11 +214,23 @@ describe('GET /api/patients/:id', () => {
       password: PASSWORD,
     })
 
+    const chainLengthBefore = blockchain.chain.length
+
     const res = await agent.get(`/api/patients/${otherPatientId}`)
 
     expect(res.status).toBe(403)
     expect(res.body.success).toBe(false)
     expect(res.body.data).toBe(null)
     expect(res.body.error.code).toBe('FORBIDDEN')
+
+    expect(blockchain.chain.length).toBe(chainLengthBefore + 1)
+
+    const deniedEvent = blockchain.getLatestBlock().data[0]
+
+    expect(deniedEvent).toMatchObject({
+      patientId: otherPatientId,
+      role: 'PATIENT',
+      action: 'DENIED',
+    })
   })
 })
