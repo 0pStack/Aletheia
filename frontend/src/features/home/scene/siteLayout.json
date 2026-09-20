@@ -8,7 +8,7 @@
   "ahead": { "x": 0.96, "z": -0.27 },
   "left": { "x": -0.27, "z": -0.96 },
   "gouge": { "x": -0.62, "z": -0.78, "length": 48, "width": 5 },
-  "clearing": { "block": 13, "crystal": 24, "camera": 5 },
+  "clearing": { "block": 13, "camera": 5 },
   "sectors": 8,
   "tiers": [
     {
@@ -51,19 +51,6 @@
       "clusters": 48, "loose": 0.12, "spread": [9, 36],
       "size": [0.8, 3.4], "sizePower": 1.6, "grow": 0.0038,
       "sink": 0.25, "shadow": 0, "sectored": false
-    },
-    {
-      "$note": "CrystalA/B are authored ~3.2 m tall and are NOT normalised, so size multiplies raw mesh coords: 0.12-0.42 gives 0.4-1.4 m clusters. scaleY keeps them upright and tilt keeps them near-vertical, unlike the tumbled stone tiers.",
-      "name": "crystals",
-      "meshes": ["CrystalA", "CrystalB"],
-      "material": "Crystal",
-      "count": 110,
-      "origin": "view",
-      "near": 6, "far": 46, "power": 1.25, "forward": 0.80,
-      "clusters": 30, "loose": 0.25, "spread": [1.0, 3.0],
-      "size": [0.22, 0.62], "sizePower": 1.7, "grow": 0,
-      "scaleY": [0.55, 0.85], "tilt": 0.22,
-      "sink": 0.18, "shadow": 40, "sectored": false
     }
   ],
   "tint": { "warm": [1.14, 1.0, 0.86], "cool": [0.72, 0.66, 0.72], "spread": 0.26 }
