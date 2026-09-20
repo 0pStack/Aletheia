@@ -1,9 +1,11 @@
 import { generateKeyPairSync } from 'node:crypto'
 
-export function generateKeyPair(): {
+export interface KeyPair {
   publicKey: string
   privateKey: string
-} {
+}
+
+export function generateKeyPair(): KeyPair {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
     publicKeyEncoding: {
       type: 'spki',
