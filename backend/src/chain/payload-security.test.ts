@@ -67,4 +67,22 @@ describe('blockchain payload security', () => {
 
     expect(hasOnlyAllowedBlockchainPayloadFields(blockchain.chain)).toBe(false)
   })
+
+  it('allows a blockchain when all payload fields are whitelisted', () => {
+    const blockchain = new Blockchain()
+
+    blockchain.addBlock([
+      {
+        id: 'event-1',
+        patientId: 101,
+        userId: 5,
+        role: 'DOCTOR',
+        action: 'READ',
+        timestamp: '2026-09-17T10:00:00.000Z',
+        serverId: 'server-1',
+      },
+    ])
+
+    expect(hasOnlyAllowedBlockchainPayloadFields(blockchain.chain)).toBe(true)
+  })
 })
