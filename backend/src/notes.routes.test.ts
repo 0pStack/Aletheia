@@ -7,6 +7,7 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
 import { hashPassword } from './auth.js'
+import { Blockchain } from './blockchain.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../db/schema.sql')
@@ -15,6 +16,8 @@ const PASSWORD = 'Password123!'
 let db: DatabaseType
 let app: Express
 let patientId: number
+let otherPatientId: number
+let blockchain: Blockchain
 
 beforeAll(() => {
   db = new Database(':memory:')
@@ -25,6 +28,12 @@ beforeAll(() => {
     db
       .prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
       .run('Anna Andersson', '19850101-1234').lastInsertRowid,
+  )
+
+  otherPatientId = Number(
+    db
+      .prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
+      .run('Erik Eriksson', '19900101-5678').lastInsertRowid,
   )
 
   db.prepare(
@@ -40,16 +49,18 @@ beforeAll(() => {
 
   db.prepare(
     `INSERT INTO users (
-    username,
-    password_hash,
-    name,
-    role,
-    patient_id
-  )
-  VALUES (?, ?, ?, ?, ?)`,
+      username,
+      password_hash,
+      name,
+      role,
+      patient_id
+    )
+    VALUES (?, ?, ?, ?, ?)`,
   ).run('patient_anna', hashPassword(PASSWORD), 'Anna Andersson', 'PATIENT', patientId)
 
-  app = createApp({ db })
+  blockchain = new Blockchain()
+
+  app = createApp({ db, blockchain })
 })
 
 afterAll(() => {
@@ -142,12 +153,12 @@ describe('GET /api/patients/:id', () => {
 
     const insertNote = db.prepare(
       `INSERT INTO notes (
-      patient_id,
-      author_id,
-      text,
-      visibility
-    )
-    VALUES (?, ?, ?, ?)`,
+        patient_id,
+        author_id,
+        text,
+        visibility
+      )
+      VALUES (?, ?, ?, ?)`,
     )
 
     insertNote.run(patientId, doctor.id, 'Private doctor note', 'PRIVATE')
@@ -193,5 +204,33 @@ describe('GET /api/patients/:id', () => {
         }),
       ]),
     )
+  })
+
+  it('rejects a patient trying to read another patient record', async () => {
+    const agent = request.agent(app)
+
+    await agent.post('/api/auth/login').send({
+      username: 'patient_anna',
+      password: PASSWORD,
+    })
+
+    const chainLengthBefore = blockchain.chain.length
+
+    const res = await agent.get(`/api/patients/${otherPatientId}`)
+
+    expect(res.status).toBe(403)
+    expect(res.body.success).toBe(false)
+    expect(res.body.data).toBe(null)
+    expect(res.body.error.code).toBe('FORBIDDEN')
+
+    expect(blockchain.chain.length).toBe(chainLengthBefore + 1)
+
+    const deniedEvent = blockchain.getLatestBlock().data[0]
+
+    expect(deniedEvent).toMatchObject({
+      patientId: otherPatientId,
+      role: 'PATIENT',
+      action: 'DENIED',
+    })
   })
 })

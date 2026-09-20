@@ -1,21 +1,30 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router, type Response } from 'express'
+import { randomUUID } from 'node:crypto'
+import type { Blockchain } from './blockchain.js'
 import { createNote, getVisibleNotes } from './notes.js'
 import { requireRole } from './rbac.js'
 
 function ok<T>(res: Response, data: T): Response {
-  return res.status(200).json({ success: true, data, error: null })
+  return res.status(200).json({
+    success: true,
+    data,
+    error: null,
+  })
 }
 
 function fail(res: Response, status: number, code: string, message: string): Response {
   return res.status(status).json({
     success: false,
     data: null,
-    error: { code, message },
+    error: {
+      code,
+      message,
+    },
   })
 }
 
-export function createNotesRouter(db: DatabaseType): Router {
+export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Router {
   const router = Router()
 
   router.post('/:id/notes', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
@@ -25,7 +34,10 @@ export function createNotesRouter(db: DatabaseType): Router {
 
     const { text, visibility } =
       typeof body === 'object' && body !== null
-        ? (body as { text?: unknown; visibility?: unknown })
+        ? (body as {
+            text?: unknown
+            visibility?: unknown
+          })
         : {}
 
     if (
@@ -57,15 +69,31 @@ export function createNotesRouter(db: DatabaseType): Router {
       return fail(res, 400, 'BAD_REQUEST', 'Valid patient is required.')
     }
 
+    if (user.role === 'PATIENT' && user.patientId !== patientId) {
+      blockchain.addBlock([
+        {
+          id: randomUUID(),
+          patientId,
+          userId: user.id,
+          role: user.role,
+          action: 'DENIED',
+          timestamp: new Date().toISOString(),
+          serverId: 'server-1',
+        },
+      ])
+
+      return fail(res, 403, 'FORBIDDEN', 'You do not have permission to access this patient.')
+    }
+
     const patient = db
       .prepare(
         `SELECT
-          id,
-          name,
-          personal_number,
-          created_at
-        FROM patients
-        WHERE id = ?`,
+            id,
+            name,
+            personal_number,
+            created_at
+          FROM patients
+          WHERE id = ?`,
       )
       .get(patientId)
 
