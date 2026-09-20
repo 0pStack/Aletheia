@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { describe, expect, it } from 'vitest'
-import { getVisibleNotes } from './notes.js'
+import { createNote, getVisibleNotes } from './notes.js'
 
 describe('note visibility', () => {
   it('shows a PRIVATE note only to its author', () => {
@@ -152,6 +152,81 @@ describe('note visibility', () => {
     expect(nurseNotes).toHaveLength(1)
     expect(clinicNotes).toHaveLength(1)
     expect(patientNotes).toHaveLength(1)
+
+    db.close()
+  })
+
+  it('creates a PRIVATE note', () => {
+    const db = new Database(':memory:')
+
+    db.exec(`
+    CREATE TABLE notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      author_id INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      visibility TEXT NOT NULL CHECK (
+        visibility IN ('PRIVATE', 'STAFF', 'ALL')
+      ),
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc'))
+    )
+  `)
+
+    const note = createNote(db, {
+      patientId: 101,
+      authorId: 5,
+      text: 'Private medical note',
+      visibility: 'PRIVATE',
+    })
+
+    expect(note.patient_id).toBe(101)
+    expect(note.author_id).toBe(5)
+    expect(note.text).toBe('Private medical note')
+    expect(note.visibility).toBe('PRIVATE')
+
+    db.close()
+  })
+
+  it('creates notes with all three visibility levels', () => {
+    const db = new Database(':memory:')
+
+    db.exec(`
+    CREATE TABLE notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      author_id INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      visibility TEXT NOT NULL CHECK (
+        visibility IN ('PRIVATE', 'STAFF', 'ALL')
+      ),
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc'))
+    )
+  `)
+
+    const privateNote = createNote(db, {
+      patientId: 101,
+      authorId: 5,
+      text: 'Private note',
+      visibility: 'PRIVATE',
+    })
+
+    const staffNote = createNote(db, {
+      patientId: 101,
+      authorId: 5,
+      text: 'Staff note',
+      visibility: 'STAFF',
+    })
+
+    const allNote = createNote(db, {
+      patientId: 101,
+      authorId: 5,
+      text: 'All note',
+      visibility: 'ALL',
+    })
+
+    expect(privateNote.visibility).toBe('PRIVATE')
+    expect(staffNote.visibility).toBe('STAFF')
+    expect(allNote.visibility).toBe('ALL')
 
     db.close()
   })

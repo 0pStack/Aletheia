@@ -3,6 +3,7 @@ import express, { type Express } from 'express'
 import session from 'express-session'
 import { createAuthRouter } from './auth.routes.js'
 import { db as defaultDb } from './db.js'
+import { createNotesRouter } from './notes.routes.js'
 
 export interface CreateAppOptions {
   db?: DatabaseType
@@ -33,6 +34,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   })
 
   app.use('/api/auth', createAuthRouter(db))
+  app.use('/api/patients', createNotesRouter(db))
 
   return app
 }
