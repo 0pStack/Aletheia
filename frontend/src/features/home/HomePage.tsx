@@ -1,8 +1,20 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Link } from 'react-router'
 import type { Role, SessionUser } from '../../api/schemas'
-import { LiquidCanvas } from '../auth/liquid/LiquidCanvas'
 import { useSession } from '../auth/useSession'
 import styles from './HomePage.module.css'
+
+// three.js is only needed here, so it stays out of the bundle the login page loads. The scene is
+// scenery: if its chunk fails to load (a deploy mid-session, a dropped connection) the page must
+// still work, so the failure resolves to nothing and the CSS backdrop stands in.
+const LandingScene = lazy<ComponentType>(() =>
+  import('./scene/LandingScene')
+    .then((module) => ({ default: module.LandingScene }))
+    .catch((error: unknown) => {
+      console.error('Landing scene failed to load:', error)
+      return { default: () => null }
+    }),
+)
 
 const ROLE_LABELS: Record<Role, string> = {
   DOCTOR: 'Doctor',
@@ -51,7 +63,11 @@ export function HomePage() {
 
   return (
     <>
-      <LiquidCanvas scene="frost" className={styles.scene} />
+      <div className={styles.scene}>
+        <Suspense fallback={null}>
+          <LandingScene />
+        </Suspense>
+      </div>
       <section className={styles.hero} aria-labelledby="home-heading">
         <p className={styles.eyebrow}>{ROLE_LABELS[user.role]}</p>
         <h1 id="home-heading" className={styles.name}>

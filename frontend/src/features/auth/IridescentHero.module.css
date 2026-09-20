@@ -10,7 +10,9 @@
   overflow: hidden;
   isolation: isolate;
   /* Shown until the shader's first frame, and permanently if WebGL is unavailable. */
-  background: var(--color-obsidian) url('/images/login-hero.webp') center 30% / cover no-repeat;
+  /* No still behind the liquid: it dated the moment the scene changed. Plain obsidian, which
+     the canvas fades up over. */
+  background: var(--color-obsidian);
 }
 
 @media (min-width: 768px) {

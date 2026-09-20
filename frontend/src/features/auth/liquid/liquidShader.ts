@@ -8,34 +8,9 @@ void main() {
 }
 `
 
-// Liquid: value-noise fbm rotates its own coordinates (domain warping), then soft bands blend
-// sage into amber, pooling into oxblood toward the bottom. Lens: a sphere drawn in 2D that
-// refracts the same field with a per-channel offset (chromatic dispersion) plus a Fresnel rim.
-//
-// Frost: the scene on the far side of the lens, shown on the landing page. A ray is marched
-// over a ridged-noise height field, so peaks have real slopes: steep faces stay bare rock,
-// gentle ones hold snow, the low dawn sun (in the login's own bronze, so both scenes read as
-// one world) lights one side of every ridge, and distance fades into haze. The palette is the
-// login's, moved outdoors: olive-black rock, bronze light, sage haze, oxblood in the low ground.
-// The viewpoint
-// drifts slowly forward; uScroll flies it on toward the range and tips it down over it.
-//
-// Dive (uDive, linear 0..1) pushes the viewpoint into the lens: it grows exponentially, which is
-// how a steady push-in reads on screen, while its interior swirls and magnifies. A cold flare
-// covers the moment the glass dissolves into the frost scene the landing page starts on.
-export const FRAGMENT_SHADER = /* glsl */ `
-precision highp float;
-
-uniform vec2 uResolution;
-uniform float uTime;
-uniform vec2 uPointer;
-uniform float uReveal;
-uniform vec2 uLensCenter;
-uniform float uDive;
-uniform float uLight;
-uniform float uScroll;
-varying vec2 vUv;
-
+// The night liquid on its own, so the landing scene can show the same field inside the lens it
+// came through. Expects a float uTime uniform to be declared before it.
+export const LIQUID_FIELD_GLSL = /* glsl */ `
 // Palette sampled from monopo.vn's hero: black base, muted tan/bronze and grey-olive ribbons.
 const vec3 NIGHT = vec3(0.03, 0.03, 0.026);
 const vec3 DEEP_OLIVE = vec3(0.1, 0.12, 0.09);
@@ -43,13 +18,6 @@ const vec3 OLIVE = vec3(0.34, 0.4, 0.31);
 const vec3 TAN = vec3(0.56, 0.49, 0.3);
 const vec3 BRONZE_LIGHT = vec3(0.8, 0.68, 0.45);
 const vec3 OXBLOOD_GLOW = vec3(0.3, 0.07, 0.05);
-
-const vec3 SKY_HIGH = vec3(0.58, 0.64, 0.6);
-const vec3 SKY_LOW = vec3(0.88, 0.8, 0.64);
-const vec3 HAZE = vec3(0.74, 0.76, 0.69);
-const vec3 ROCK = vec3(0.1, 0.11, 0.085);
-const vec3 SNOW = vec3(0.94, 0.92, 0.87);
-const vec3 SNOW_SHADE = vec3(0.46, 0.55, 0.56);
 
 float hash(vec3 p) {
   p = fract(p * 0.3183099 + 0.1);
@@ -78,6 +46,72 @@ float fbm(vec3 p) {
   }
   return value;
 }
+
+mat2 rotate2d(float angle) {
+  float s = sin(angle);
+  float c = cos(angle);
+  return mat2(c, -s, s, c);
+}
+
+vec3 liquid(vec2 p, float height) {
+  float t = uTime * 0.045;
+  float warp = fbm(vec3(p * 0.85, t));
+  vec2 q = rotate2d(warp * 4.2) * p;
+  vec2 drift = vec2(fbm(vec3(q * 1.1 + 3.3, t * 1.4)), fbm(vec3(q * 1.1 + 7.7, t * 0.8)));
+
+  float phase = (q.x * 1.4 + drift.x * 3.0 + q.y * 0.5) * 2.6 + t * 5.0;
+
+  // Two soft ribbon families over black: wide tan ribbons and thinner grey-olive ones between
+  // them. The black gaps between ribbons are what give the flow its depth.
+  float tanRibbon = smoothstep(0.5, 0.98, sin(phase) * 0.5 + 0.5);
+  float oliveRibbon = smoothstep(0.55, 0.98, sin(phase * 0.8 + 2.4 + drift.y * 2.5) * 0.5 + 0.5);
+
+  vec3 color = mix(NIGHT, DEEP_OLIVE, smoothstep(0.3, 0.7, drift.y) * 0.8);
+  color = mix(color, OLIVE, oliveRibbon * (1.0 - tanRibbon) * 0.85);
+  color = mix(color, TAN, tanRibbon);
+  color = mix(color, BRONZE_LIGHT, pow(tanRibbon, 4.0) * 0.55);
+
+  color = mix(color, NIGHT, smoothstep(0.3, 0.0, height) * 0.65);
+  color += OXBLOOD_GLOW * smoothstep(0.38, 0.0, height) * (0.5 + 0.5 * drift.x);
+  return color;
+}
+`
+
+// Liquid: value-noise fbm rotates its own coordinates (domain warping), then soft bands blend
+// sage into amber, pooling into oxblood toward the bottom. Lens: a sphere drawn in 2D that
+// refracts the same field with a per-channel offset (chromatic dispersion) plus a Fresnel rim.
+//
+// Frost: the scene on the far side of the lens, shown on the landing page. A ray is marched
+// over a ridged-noise height field, so peaks have real slopes: steep faces stay bare rock,
+// gentle ones hold snow, the low dawn sun (in the login's own bronze, so both scenes read as
+// one world) lights one side of every ridge, and distance fades into haze. The palette is the
+// login's, moved outdoors: olive-black rock, bronze light, sage haze, oxblood in the low ground.
+// The viewpoint
+// drifts slowly forward; uScroll flies it on toward the range and tips it down over it.
+//
+// Dive (uDive, linear 0..1) pushes the viewpoint into the lens: it grows exponentially, which is
+// how a steady push-in reads on screen, while its interior swirls and magnifies. A cold flare
+// covers the moment the glass dissolves into the frost scene the landing page starts on.
+export const FRAGMENT_SHADER = /* glsl */ `
+precision highp float;
+
+uniform vec2 uResolution;
+uniform float uTime;
+uniform vec2 uPointer;
+uniform float uReveal;
+uniform vec2 uLensCenter;
+uniform float uDive;
+uniform float uLight;
+uniform float uScroll;
+varying vec2 vUv;
+
+${LIQUID_FIELD_GLSL}
+const vec3 SKY_HIGH = vec3(0.58, 0.64, 0.6);
+const vec3 SKY_LOW = vec3(0.88, 0.8, 0.64);
+const vec3 HAZE = vec3(0.74, 0.76, 0.69);
+const vec3 ROCK = vec3(0.1, 0.11, 0.085);
+const vec3 SNOW = vec3(0.94, 0.92, 0.87);
+const vec3 SNOW_SHADE = vec3(0.46, 0.55, 0.56);
 
 float hash2(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -122,35 +156,6 @@ float terrainFine(vec2 p, float ahead) {
     amplitude *= 0.5;
   }
   return height * 3.1 * smoothstep(0.6, 7.0, ahead);
-}
-
-mat2 rotate2d(float angle) {
-  float s = sin(angle);
-  float c = cos(angle);
-  return mat2(c, -s, s, c);
-}
-
-vec3 liquid(vec2 p, float height) {
-  float t = uTime * 0.045;
-  float warp = fbm(vec3(p * 0.85, t));
-  vec2 q = rotate2d(warp * 4.2) * p;
-  vec2 drift = vec2(fbm(vec3(q * 1.1 + 3.3, t * 1.4)), fbm(vec3(q * 1.1 + 7.7, t * 0.8)));
-
-  float phase = (q.x * 1.4 + drift.x * 3.0 + q.y * 0.5) * 2.6 + t * 5.0;
-
-  // Two soft ribbon families over black: wide tan ribbons and thinner grey-olive ones between
-  // them. The black gaps between ribbons are what give the flow its depth.
-  float tanRibbon = smoothstep(0.5, 0.98, sin(phase) * 0.5 + 0.5);
-  float oliveRibbon = smoothstep(0.55, 0.98, sin(phase * 0.8 + 2.4 + drift.y * 2.5) * 0.5 + 0.5);
-
-  vec3 color = mix(NIGHT, DEEP_OLIVE, smoothstep(0.3, 0.7, drift.y) * 0.8);
-  color = mix(color, OLIVE, oliveRibbon * (1.0 - tanRibbon) * 0.85);
-  color = mix(color, TAN, tanRibbon);
-  color = mix(color, BRONZE_LIGHT, pow(tanRibbon, 4.0) * 0.55);
-
-  color = mix(color, NIGHT, smoothstep(0.3, 0.0, height) * 0.65);
-  color += OXBLOOD_GLOW * smoothstep(0.38, 0.0, height) * (0.5 + 0.5 * drift.x);
-  return color;
 }
 
 vec3 frost(vec2 st, float aspect) {

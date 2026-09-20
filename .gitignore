@@ -10,3 +10,15 @@ node_modules/
 
 # Local cryptographic keys
 backend/keys/
+
+# Blender autosave backups: a .blend1 is a copy of the previous save, so it can be far larger
+# than the file itself (one reached 129 MB, past GitHub's 100 MB limit).
+*.blend1
+
+# Asset-library download caches. Imported models are baked into the exported glTF in
+# public/landing; the source downloads are not ours to redistribute and are re-fetchable.
+frontend/design/assets/
+
+# Scratch copies taken before edits.
+*.bak
+*.bak2

@@ -1,29 +1,54 @@
-/* The frost scene fills the viewport behind the whole page; the section after the hero sits on
+/* The landing site fills the viewport behind the whole page; the section after the hero sits on
    it as smoked glass, like the sign-in panel sits on the liquid. */
 .scene {
   position: fixed;
   inset: 0;
   z-index: -1;
-  /* Shown until the first frame, and for good without WebGL: the scene's own sky. */
-  background: linear-gradient(to top, oklch(0.84 0.06 85), oklch(0.7 0.03 150));
+  /* Held until the first frame and for good without WebGL. Flat, not a painted sunset: any
+     likeness of the scene dates the moment the scene changes. Not transparent either, or the
+     paper-white body shows through as a flash. */
+  background: var(--color-obsidian);
 }
 
-/* Type sits in the sky, above the range, where the scene is calm and light. */
+/* Type sits in the darker sky on the left; the block holds the right. */
 .hero {
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   min-height: calc(100vh - var(--header-height));
   padding: clamp(var(--space-12), 14vh, 9rem) clamp(var(--space-6), 6vw, 6rem) var(--space-12);
-  color: var(--color-obsidian);
+  color: var(--color-paper);
+}
+
+/* The scene's light moves, so the type keeps a floor of contrast of its own: a scrim with no
+   edge anywhere. The mask takes it to nothing under the header, which is see-through. */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    70% 55% at 0% 45%,
+    color-mix(in oklch, var(--color-obsidian) 50%, transparent),
+    color-mix(in oklch, var(--color-obsidian) 28%, transparent) 45%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-obsidian) var(--space-16)
+  );
+  mask-image: linear-gradient(to bottom, transparent, var(--color-obsidian) var(--space-16));
 }
 
 .eyebrow {
   font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: color-mix(in oklch, var(--color-obsidian) 72%, transparent);
+  color: color-mix(in oklch, var(--color-paper) 88%, transparent);
 }
 
 .name {
@@ -42,25 +67,49 @@
   line-height: var(--leading-body);
 }
 
+/* The sign-in panel's smoked glass at button size. It is darker than the panel because the
+   scene can be at its brightest right behind it, and the label has to hold 4.5:1 on the glass
+   alone; hovering thins it, and even thinned it holds. */
 .action {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
   margin-top: var(--space-12);
   padding: var(--space-4) var(--space-8);
-  background: var(--color-obsidian);
   color: var(--color-paper);
   font-size: var(--text-md);
   text-decoration: none;
-  transition: background-color var(--duration-ui) var(--ease-glide);
+  background: color-mix(in oklch, var(--color-obsidian) 64%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-paper) 14%, transparent);
+  backdrop-filter: blur(32px) saturate(1.2);
+  transition:
+    background-color var(--duration-ui) var(--ease-glide),
+    border-color var(--duration-ui) var(--ease-glide);
+}
+
+.action::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--color-paper) 55%, transparent) 50%,
+    transparent
+  );
 }
 
 .action:hover {
-  background: var(--color-inkstone);
+  background: color-mix(in oklch, var(--color-obsidian) 56%, transparent);
+  border-color: color-mix(in oklch, var(--color-paper) 32%, transparent);
 }
 
 .action:focus-visible {
-  outline: 2px solid var(--color-obsidian);
+  outline: 2px solid var(--color-paper);
   outline-offset: 3px;
 }
 
@@ -77,34 +126,60 @@
   /* Same smoked glass as the sign-in panel, so the text and border tokens flip to light here. */
   --color-text: var(--color-paper);
   --color-text-muted: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  --log-fade: 7rem;
 
   position: relative;
+  isolation: isolate;
   padding: clamp(var(--space-12), 12vh, 8rem) clamp(var(--space-6), 6vw, 6rem);
+  padding-top: calc(var(--log-fade) + var(--space-6));
   color: var(--color-text);
-  background: color-mix(in oklch, var(--color-obsidian) 58%, transparent);
-  border-top: 1px solid color-mix(in oklch, var(--color-paper) 10%, transparent);
-  backdrop-filter: blur(32px) saturate(1.2);
 }
 
-/* The sheen along the top edge of the sign-in panel. */
+/* The glass comes up out of the scene instead of starting on a line, and the heading sits below
+   the rise. The rise only darkens; the blur starts under it, where the tint is already deep
+   enough to hide the line where it begins. Masking one blurred box would be shorter, but Safari
+   blurs the whole box and masks only the tint, and stacked bands of growing blur show as
+   stripes. */
 .log::before {
   content: '';
   position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 1px;
+  inset: var(--log-fade) 0 0;
+  z-index: -1;
+  background: color-mix(in oklch, var(--color-obsidian) 86%, transparent);
+  backdrop-filter: blur(32px) saturate(1.2);
+}
+
+.log::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: var(--log-fade);
+  pointer-events: none;
   background: linear-gradient(
-    90deg,
+    to bottom,
     transparent,
-    color-mix(in oklch, var(--color-paper) 55%, transparent) 50%,
-    transparent
+    color-mix(in oklch, var(--color-obsidian) 44%, transparent) 45%,
+    color-mix(in oklch, var(--color-obsidian) 86%, transparent)
   );
 }
 
 @supports not (backdrop-filter: blur(1px)) {
-  .log {
+  .action,
+  .log::before {
     background: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
+  }
+
+  .log::after {
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in oklch, var(--color-obsidian) 90%, transparent)
+    );
+  }
+
+  .action:hover {
+    background: color-mix(in oklch, var(--color-obsidian) 82%, transparent);
   }
 }
 
@@ -132,6 +207,8 @@
 .fact {
   counter-increment: fact;
   max-width: 34ch;
+  padding-top: var(--space-4);
+  border-top: 1px solid color-mix(in oklch, var(--color-paper) 22%, transparent);
 }
 
 .fact::before {
@@ -140,7 +217,8 @@
   margin-bottom: var(--space-4);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  color: color-mix(in oklch, var(--color-paper) 55%, transparent);
 }
 
 .factTitle {

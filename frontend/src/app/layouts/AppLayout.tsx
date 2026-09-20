@@ -36,7 +36,7 @@ export function AppLayout() {
       <a href={`#${MAIN_CONTENT_ID}`} className={styles.skipLink}>
         Skip to content
       </a>
-      <header className={styles.header} data-settle-in={settleIn}>
+      <header className={styles.header} data-settle-in={settleIn} data-over-scene={fullBleed}>
         <Link to="/" className={styles.wordmark}>
           Aletheia
         </Link>

@@ -22,6 +22,22 @@
   border-bottom: var(--border-hairline);
 }
 
+/* The landing page's scene is dark and runs up behind the header, so its tokens flip to light,
+   as they do on the sign-in panel. */
+.header[data-over-scene] {
+  --color-text: var(--color-paper);
+  --color-text-muted: color-mix(in oklch, var(--color-paper) 70%, transparent);
+
+  color: var(--color-text);
+  border-bottom-color: color-mix(in oklch, var(--color-paper) 14%, transparent);
+  /* The scene moves behind the header, so its text keeps a floor of contrast of its own. */
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--color-obsidian) 55%, transparent),
+    transparent
+  );
+}
+
 .wordmark,
 .navLink {
   text-decoration: none;
