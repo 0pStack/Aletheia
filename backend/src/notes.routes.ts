@@ -24,6 +24,17 @@ function fail(res: Response, status: number, code: string, message: string): Res
   })
 }
 
+interface Patient {
+  id: number
+  name: string
+  personalNumber: string
+}
+
+function toIso(sqliteDate: string): string {
+  if (sqliteDate.includes('T')) return sqliteDate
+  return new Date(`${sqliteDate.replace(' ', 'T')}Z`).toISOString()
+}
+
 export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Router {
   const router = Router()
 
@@ -90,12 +101,11 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
         `SELECT
             id,
             name,
-            personal_number,
-            created_at
+            personal_number AS personalNumber
           FROM patients
           WHERE id = ?`,
       )
-      .get(patientId)
+      .get(patientId) as Patient | undefined
 
     if (!patient) {
       return fail(res, 404, 'NOT_FOUND', 'Patient not found.')
@@ -104,7 +114,15 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
     const notes = getVisibleNotes(db, patientId, {
       id: user.id,
       role: user.role,
-    })
+    }).map((note) => ({
+      id: note.id,
+      authorId: note.author_id,
+      authorName: note.author_name,
+      authorRole: note.author_role,
+      text: note.text,
+      visibility: note.visibility,
+      createdAt: toIso(note.created_at),
+    }))
 
     return ok(res, {
       patient,

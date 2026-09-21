@@ -17,6 +17,16 @@ describe('note visibility', () => {
       )
     `)
 
+    db.exec(`
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL
+      )
+    `)
+
+    db.prepare('INSERT INTO users (id, name, role) VALUES (?, ?, ?)').run(5, 'Dr. Author', 'DOCTOR')
+
     db.prepare(
       `
       INSERT INTO notes (
@@ -59,6 +69,16 @@ describe('note visibility', () => {
       created_at TEXT NOT NULL
     )
   `)
+
+    db.exec(`
+    CREATE TABLE users (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL
+    )
+  `)
+
+    db.prepare('INSERT INTO users (id, name, role) VALUES (?, ?, ?)').run(5, 'Dr. Author', 'DOCTOR')
 
     db.prepare(
       `
@@ -115,6 +135,16 @@ describe('note visibility', () => {
     )
   `)
 
+    db.exec(`
+    CREATE TABLE users (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL
+    )
+  `)
+
+    db.prepare('INSERT INTO users (id, name, role) VALUES (?, ?, ?)').run(5, 'Dr. Author', 'DOCTOR')
+
     db.prepare(
       `
     INSERT INTO notes (
@@ -152,6 +182,9 @@ describe('note visibility', () => {
     expect(nurseNotes).toHaveLength(1)
     expect(clinicNotes).toHaveLength(1)
     expect(patientNotes).toHaveLength(1)
+
+    expect(doctorNotes[0]?.author_name).toBe('Dr. Author')
+    expect(doctorNotes[0]?.author_role).toBe('DOCTOR')
 
     db.close()
   })
