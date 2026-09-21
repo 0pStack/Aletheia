@@ -10,10 +10,6 @@ export interface LiquidFrame {
   lensY: number
   /** Linear 0..1 progress of the trip through the lens; the shader shapes the pacing. */
   dive: number
-  /** 0 the night liquid (login), 1 the frost scene (landing page). */
-  light: number
-  /** 0..1 of the first viewport scrolled away; lifts the viewpoint in the frost scene. */
-  scroll: number
 }
 
 export interface LiquidRenderer {
@@ -88,8 +84,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     reveal: gl.getUniformLocation(program, 'uReveal'),
     lensCenter: gl.getUniformLocation(program, 'uLensCenter'),
     dive: gl.getUniformLocation(program, 'uDive'),
-    light: gl.getUniformLocation(program, 'uLight'),
-    scroll: gl.getUniformLocation(program, 'uScroll'),
   }
 
   return {
@@ -103,14 +97,12 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
       gl.viewport(0, 0, pixelWidth, pixelHeight)
       gl.uniform2f(uniforms.resolution, pixelWidth, pixelHeight)
     },
-    render({ time, pointerX, pointerY, reveal, lensX, lensY, dive, light, scroll }) {
+    render({ time, pointerX, pointerY, reveal, lensX, lensY, dive }) {
       gl.uniform1f(uniforms.time, time)
       gl.uniform2f(uniforms.pointer, pointerX, pointerY)
       gl.uniform1f(uniforms.reveal, reveal)
       gl.uniform2f(uniforms.lensCenter, lensX, lensY)
       gl.uniform1f(uniforms.dive, dive)
-      gl.uniform1f(uniforms.light, light)
-      gl.uniform1f(uniforms.scroll, scroll)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
     },
     // Deliberately not calling WEBGL_lose_context: React StrictMode remounts onto the same

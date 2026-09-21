@@ -9,7 +9,6 @@ const MAX_PIXEL_RATIO = 1.25
 const REVEAL_MS = 2400
 const STILL_FRAME_TIME = 18
 const POINTER_FOLLOW = 0.05
-const SCROLL_FOLLOW = 0.08
 const MAX_FRAME_STEP_S = 0.05
 
 // The field's clock and pointer offset outlive any one canvas, so the app's canvas picks up on
@@ -18,8 +17,6 @@ const carried = { time: 0, pointerX: 0, pointerY: 0 }
 
 interface LiquidCanvasProps {
   className?: string
-  /** night is the login's liquid; frost is the mountain scene the dive arrives in. */
-  scene?: 'night' | 'frost'
   /** Pushes the viewpoint into the lens over DIVE_MS. One way: the page leaves when it ends. */
   diving?: boolean
 }
@@ -47,7 +44,7 @@ function sizeToElement(renderer: LiquidRenderer, canvas: HTMLCanvasElement) {
   renderer.resize(rect.width, rect.height, pixelRatio)
 }
 
-export function LiquidCanvas({ className, scene = 'night', diving = false }: LiquidCanvasProps) {
+export function LiquidCanvas({ className, diving = false }: LiquidCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const divingRef = useRef(diving)
 
@@ -66,7 +63,6 @@ export function LiquidCanvas({ className, scene = 'night', diving = false }: Liq
     }
 
     sizeToElement(renderer, canvas)
-    const light = scene === 'frost' ? 1 : 0
 
     if (!allowsMotion()) {
       const drawStill = () => {
@@ -79,8 +75,6 @@ export function LiquidCanvas({ className, scene = 'night', diving = false }: Liq
           lensX: lens.x,
           lensY: lens.y,
           dive: 0,
-          light,
-          scroll: 0,
         })
       }
       drawStill()
@@ -103,7 +97,6 @@ export function LiquidCanvas({ className, scene = 'night', diving = false }: Liq
     const pointer = { x: carried.pointerX, y: carried.pointerY }
     let lens = readLensCenter(canvas)
     let elapsed = carried.time
-    let scroll = 0
     const startedAt = elapsed
     // Wall clock, not accumulated frame steps: the page leaves on a timer, so a slow GPU must
     // skip ahead rather than fall behind it.
@@ -121,8 +114,6 @@ export function LiquidCanvas({ className, scene = 'night', diving = false }: Liq
       const diveProgress = diveStartedAt === null ? 0 : Math.min((now - diveStartedAt) / DIVE_MS, 1)
       pointer.x += (pointerTarget.x - pointer.x) * POINTER_FOLLOW
       pointer.y += (pointerTarget.y - pointer.y) * POINTER_FOLLOW
-      const scrollTarget = Math.min(Math.max(window.scrollY / window.innerHeight, 0), 1)
-      scroll += (scrollTarget - scroll) * SCROLL_FOLLOW
 
       renderer.render({
         time: elapsed,
@@ -132,8 +123,6 @@ export function LiquidCanvas({ className, scene = 'night', diving = false }: Liq
         lensX: lens.x,
         lensY: lens.y,
         dive: diveProgress,
-        light,
-        scroll,
       })
       carried.time = elapsed
       carried.pointerX = pointer.x
@@ -204,7 +193,7 @@ export function LiquidCanvas({ className, scene = 'night', diving = false }: Liq
       canvas.removeEventListener('webglcontextlost', onContextLost)
       renderer.dispose()
     }
-  }, [scene])
+  }, [])
 
   return (
     <canvas
