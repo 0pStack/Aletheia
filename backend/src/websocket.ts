@@ -2,5 +2,15 @@ import type { Server } from 'node:http'
 import { WebSocketServer } from 'ws'
 
 export function attachWebSocketServer(server: Server): WebSocketServer {
-  return new WebSocketServer({ server })
+  const webSocketServer = new WebSocketServer({ server })
+
+  webSocketServer.on('connection', (socket) => {
+    console.info('WebSocket client connected')
+
+    socket.on('close', () => {
+      console.info('WebSocket client disconnected')
+    })
+  })
+
+  return webSocketServer
 }
