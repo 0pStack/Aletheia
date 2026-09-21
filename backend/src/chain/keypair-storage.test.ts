@@ -16,17 +16,21 @@ describe('loadOrCreateKeyPair', () => {
     expect(firstKeyPair.privateKey).toBe(secondKeyPair.privateKey)
   })
 
-  it('stores the private key with owner-only permissions', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'aletheia-keys-'))
-    const filePath = join(directory, 'node-key')
+  // Windows has no POSIX permission bits, so the mode always reads back as 0o666 there.
+  it.skipIf(process.platform === 'win32')(
+    'stores the private key with owner-only permissions',
+    () => {
+      const directory = mkdtempSync(join(tmpdir(), 'aletheia-keys-'))
+      const filePath = join(directory, 'node-key')
 
-    loadOrCreateKeyPair(filePath)
+      loadOrCreateKeyPair(filePath)
 
-    const privateKeyPath = `${filePath}.private.pem`
-    const permissions = statSync(privateKeyPath).mode & 0o777
+      const privateKeyPath = `${filePath}.private.pem`
+      const permissions = statSync(privateKeyPath).mode & 0o777
 
-    expect(permissions).toBe(0o600)
-  })
+      expect(permissions).toBe(0o600)
+    },
+  )
 
   it('stores both public and private key files', () => {
     const directory = mkdtempSync(join(tmpdir(), 'aletheia-keys-'))

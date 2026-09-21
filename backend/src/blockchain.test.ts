@@ -34,7 +34,9 @@ describe('Blockchain', () => {
 
     blockchain.addBlock([testEvent])
 
-    blockchain.chain[1]!.data[0]!.action = 'WRITE'
+    const tamperedEvent = blockchain.chain[1]?.data[0]
+    if (!tamperedEvent) throw new Error('expected the added block to hold one event')
+    tamperedEvent.action = 'WRITE'
 
     expect(blockchain.isChainValid()).toBe(false)
   })
