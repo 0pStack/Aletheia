@@ -24,6 +24,12 @@ interface NoteRow {
   created_at: string
 }
 
+
+export interface VisibleNoteRow extends NoteRow {
+  author_name: string
+  author_role: UserRole
+}
+
 export function createNote(db: DatabaseType, input: CreateNoteInput): NoteRow {
   const result = db
     .prepare(
@@ -40,23 +46,30 @@ export function createNote(db: DatabaseType, input: CreateNoteInput): NoteRow {
   return db.prepare('SELECT * FROM notes WHERE id = ?').get(result.lastInsertRowid) as NoteRow
 }
 
-export function getVisibleNotes(db: DatabaseType, patientId: number, viewer: NoteViewer) {
+export function getVisibleNotes(
+  db: DatabaseType,
+  patientId: number,
+  viewer: NoteViewer,
+): VisibleNoteRow[] {
   const isStaff = viewer.role === 'DOCTOR' || viewer.role === 'NURSE' || viewer.role === 'CLINIC'
-
   const canSeeAll = isStaff || viewer.role === 'PATIENT'
 
   return db
     .prepare(
-      `SELECT *
-       FROM notes
-       WHERE patient_id = ?
+      `SELECT n.*,
+              u.name AS author_name,
+              u.role AS author_role
+       FROM notes n
+       JOIN users u ON u.id = n.author_id
+       WHERE n.patient_id = ?
          AND (
-           (visibility = 'PRIVATE' AND author_id = ?)
+           (n.visibility = 'PRIVATE' AND n.author_id = ?)
            OR
-           (visibility = 'STAFF' AND ? = 1)
+           (n.visibility = 'STAFF' AND ? = 1)
            OR
-           (visibility = 'ALL' AND ? = 1)
-         )`,
+           (n.visibility = 'ALL' AND ? = 1)
+         )
+       ORDER BY n.created_at, n.id`,
     )
-    .all(patientId, viewer.id, isStaff ? 1 : 0, canSeeAll ? 1 : 0)
+    .all(patientId, viewer.id, isStaff ? 1 : 0, canSeeAll ? 1 : 0) as VisibleNoteRow[]
 }

@@ -34,11 +34,7 @@ describe('loadOrCreateKeyPair', () => {
 
     const keyPair = loadOrCreateKeyPair(filePath)
 
-    expect(readFileSync(`${filePath}.public.pem`, 'utf8')).toBe(
-      keyPair.publicKey,
-    )
-    expect(readFileSync(`${filePath}.private.pem`, 'utf8')).toBe(
-      keyPair.privateKey,
-    )
+    expect(readFileSync(`${filePath}.public.pem`, 'utf8')).toBe(keyPair.publicKey)
+    expect(readFileSync(`${filePath}.private.pem`, 'utf8')).toBe(keyPair.privateKey)
   })
 })
