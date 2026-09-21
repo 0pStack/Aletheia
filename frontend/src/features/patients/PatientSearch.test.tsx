@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { createMemoryRouter } from 'react-router'
@@ -72,6 +72,34 @@ describe('patient search on the landing page', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Search is down')
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+  })
+
+  it('lists every patient as a block when View all is pressed', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    renderLanding()
+
+    await userEvent.click(await screen.findByRole('button', { name: /view all/i }))
+
+    const list = await screen.findByRole('list', { name: /patients/i })
+    expect(within(list).getAllByRole('link')).toHaveLength(3)
+    expect(within(list).getByRole('link', { name: /cecilia carlsson/i })).toHaveAttribute(
+      'href',
+      '/patients/3',
+    )
+  })
+
+  it('goes back to searching when the user types after View all', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    renderLanding()
+    await userEvent.click(await screen.findByRole('button', { name: /view all/i }))
+    await screen.findByRole('link', { name: /bengt berg/i })
+
+    await userEvent.type(screen.getByRole('searchbox', { name: /search patients/i }), 'anna')
+
+    expect(await screen.findByRole('link', { name: /anna andersson/i })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: /bengt berg/i })).not.toBeInTheDocument(),
+    )
   })
 
   it('is not offered to a patient', async () => {

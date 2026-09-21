@@ -5,6 +5,8 @@ import { NoteList } from './NoteList'
 import { usePatientDetail } from './usePatientDetail'
 import styles from './JournalPage.module.css'
 
+export const JOURNAL_TITLE_ID = 'journal-title'
+
 function parsePatientId(raw: string | undefined): number | null {
   if (raw === undefined || !/^\d+$/.test(raw)) return null
   const id = Number(raw)
@@ -14,7 +16,7 @@ function parsePatientId(raw: string | undefined): number | null {
 function PatientNotFound() {
   return (
     <>
-      <h1>Patient not found</h1>
+      <h1 id={JOURNAL_TITLE_ID}>Patient not found</h1>
       <p>
         <Link to="/#patients">Back to patients</Link>
       </p>
@@ -52,7 +54,7 @@ export function JournalPage() {
     <article className={styles.journal}>
       <header className={styles.header}>
         <p className={styles.eyebrow}>Journal</p>
-        <h1>{patient.name}</h1>
+        <h1 id={JOURNAL_TITLE_ID}>{patient.name}</h1>
         <p className={styles.personalNumber}>{patient.personalNumber}</p>
       </header>
 

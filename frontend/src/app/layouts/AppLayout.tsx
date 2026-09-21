@@ -16,7 +16,9 @@ export function AppLayout() {
   const role = useSession().data?.role
   const canSearchPatients = role !== undefined && STAFF_ROLES.includes(role)
   // The landing page owns the full viewport; every other page sits in the reading column.
-  const fullBleed = useMatch('/') !== null || undefined
+  const onLanding = useMatch('/') !== null
+  const onJournal = useMatch('/patients/:patientId') !== null
+  const fullBleed = onLanding || onJournal || undefined
   // Captured once: the flag is cleared from history below, and the animation must outlive that.
   const [settleIn] = useState(() => arrivedByDive(location.state) || undefined)
 
@@ -33,10 +35,16 @@ export function AppLayout() {
 
   return (
     <>
-      <a href={`#${MAIN_CONTENT_ID}`} className={styles.skipLink}>
+      <a href={`#${MAIN_CONTENT_ID}`} className={styles.skipLink} inert={onJournal}>
         Skip to content
       </a>
-      <header className={styles.header} data-settle-in={settleIn} data-over-scene={fullBleed}>
+      {/* The journal is a modal over the page, so the header is out of reach while it is open. */}
+      <header
+        className={styles.header}
+        data-settle-in={settleIn}
+        data-over-scene={fullBleed}
+        inert={onJournal}
+      >
         <Link to="/" className={styles.wordmark}>
           Aletheia
         </Link>

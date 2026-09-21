@@ -1,0 +1,86 @@
+/* Smoked glass over the landing scene, like the sheet under the hero, so the same five tokens
+   flip to light here. */
+.panel {
+  --color-text: var(--color-paper);
+  --color-text-muted: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  --color-border: var(--color-paper);
+  --color-focus: var(--color-paper);
+  --color-divider: color-mix(in oklch, var(--color-paper) 20%, transparent);
+
+  /* The whole viewport, header included: the header scrolls with the landing, so leaving a strip
+     for it would show whatever part of the landing was scrolled under it instead. */
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Unlike the page, a long journal keeps a thin bar, so its length is visible. */
+  scrollbar-width: thin;
+  color: var(--color-text);
+  background: color-mix(in oklch, var(--color-obsidian) 82%, transparent);
+  backdrop-filter: blur(32px) saturate(1.2);
+}
+
+.panel:focus {
+  outline: none;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .panel {
+    background: color-mix(in oklch, var(--color-obsidian) 94%, transparent);
+  }
+}
+
+.sheet {
+  position: relative;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: clamp(var(--space-12), 10vh, 6rem) clamp(var(--space-6), 6vw, 6rem);
+}
+
+.close {
+  position: absolute;
+  top: var(--space-6);
+  right: clamp(var(--space-6), 6vw, 6rem);
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color var(--duration-ui) var(--ease-glide);
+}
+
+.close:hover {
+  border-color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: panelIn 700ms var(--ease-glide) backwards;
+  }
+
+  .sheet {
+    animation: sheetIn 900ms var(--ease-glide) 80ms backwards;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}

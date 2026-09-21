@@ -1,3 +1,16 @@
+/* The page scrolls without a visible bar, so nothing cuts into the landing scene. The colour is
+   inherited by inner scrollers such as the journal panel, which keep a thin bar. No background
+   here: once html has one, the body's stops propagating to the canvas and paints over the landing
+   scene, which sits at z-index -1. */
+html {
+  scrollbar-width: none;
+  scrollbar-color: color-mix(in oklch, var(--color-felt-gray) 70%, transparent) transparent;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--text-md);

@@ -22,8 +22,13 @@ export const patientHandlers = [
     const guard = requireStaffAccess()
     if (!guard.ok) return guard.response
 
-    const query = new URL(request.url).searchParams.get('q')?.trim().toLowerCase() ?? ''
-    // Matches the backend: an empty query is refused rather than listing every patient.
+    const rawQuery = new URL(request.url).searchParams.get('q')
+    // Matches the backend: leaving q out lists everyone, a blank q is refused.
+    if (rawQuery === null) {
+      const everyone = [...mockPatients].sort((a, b) => a.name.localeCompare(b.name))
+      return HttpResponse.json({ success: true, data: everyone, error: null })
+    }
+    const query = rawQuery.trim().toLowerCase()
     if (query === '') return badRequest('A search query is required.')
 
     const digits = query.replace(/\D/g, '')

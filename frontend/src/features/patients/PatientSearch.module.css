@@ -73,39 +73,30 @@
   gap: var(--space-4);
 }
 
-.results {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Rules sit under each row only: a rule above the first would double the input's own line. */
-.result {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+.row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-4);
-  padding-block: var(--space-4);
-  border-bottom: 1px solid var(--color-divider);
-  color: var(--color-text);
-  text-decoration: none;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-2);
 }
 
-.name {
-  font-size: var(--text-lg);
-}
-
-.personalNumber {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+/* A quiet text button, so the search box stays the obvious first move. */
+.viewAll {
+  min-height: var(--space-6);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--duration-ui) var(--ease-glide);
 }
 
-.arrow {
-  transition: transform var(--duration-ui) var(--ease-glide);
-}
-
-.result:hover .arrow,
-.result:focus-visible .arrow {
-  transform: translateX(0.25rem);
+.viewAll:hover {
+  color: var(--color-text);
 }

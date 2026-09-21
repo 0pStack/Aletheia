@@ -1,22 +1,25 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { Button } from '../../shared/ui/Button/Button'
+import { PatientInventory } from './inventory/PatientInventory'
 import { usePatientSearch } from './usePatientSearch'
 import styles from './PatientSearch.module.css'
 
 export const PATIENT_SEARCH_ID = 'patients'
 
-function SearchResults({ input }: { input: string }) {
-  const { query, search } = usePatientSearch(input)
+interface SearchResultsProps {
+  input: string
+  showAll: boolean
+}
 
-  if (query === '') {
-    return <p className={styles.hint}>Search by name or personal number.</p>
-  }
+function SearchResults({ input, showAll }: SearchResultsProps) {
+  const { mode, query, search } = usePatientSearch(input, showAll)
+
+  if (mode === 'idle') return null
 
   if (search.isPending) {
     return (
       <p className={styles.hint} role="status">
-        Searching…
+        {mode === 'all' ? 'Loading patients…' : 'Searching…'}
       </p>
     )
   }
@@ -33,28 +36,19 @@ function SearchResults({ input }: { input: string }) {
   }
 
   if (search.data.length === 0) {
-    return <p className={styles.hint}>No patients match “{query}”.</p>
+    return (
+      <p className={styles.hint}>
+        {mode === 'all' ? 'No patients yet.' : `No patients match “${query}”.`}
+      </p>
+    )
   }
 
-  return (
-    <ul className={styles.results}>
-      {search.data.map((patient) => (
-        <li key={patient.id}>
-          <Link to={`/patients/${patient.id}`} className={styles.result}>
-            <span className={styles.name}>{patient.name}</span>
-            <span className={styles.personalNumber}>{patient.personalNumber}</span>
-            <span className={styles.arrow} aria-hidden="true">
-              →
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  )
+  return <PatientInventory patients={search.data} />
 }
 
 export function PatientSearch() {
   const [input, setInput] = useState('')
+  const [showAll, setShowAll] = useState(false)
 
   return (
     <section id={PATIENT_SEARCH_ID} className={styles.section} aria-labelledby="patients-heading">
@@ -70,13 +64,29 @@ export function PatientSearch() {
           type="search"
           className={styles.input}
           value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => {
+            setInput(event.target.value)
+            if (event.target.value.trim() !== '') setShowAll(false)
+          }}
           placeholder="Name or personal number"
           autoComplete="off"
           spellCheck={false}
         />
+        <div className={styles.row}>
+          <p className={styles.hint}>Search by name or personal number.</p>
+          <button
+            type="button"
+            className={styles.viewAll}
+            onClick={() => {
+              setInput('')
+              setShowAll((current) => !current)
+            }}
+          >
+            {showAll ? 'Hide all' : 'View all'}
+          </button>
+        </div>
       </form>
-      <SearchResults input={input} />
+      <SearchResults input={input} showAll={showAll} />
     </section>
   )
 }

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ComponentType } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useOutlet } from 'react-router'
 import { STAFF_ROLES, type SessionUser } from '../../api/schemas'
 import { allowsMotion } from '../../shared/motion/allowsMotion'
 import { ROLE_LABELS } from '../../shared/roleLabels'
@@ -34,19 +34,11 @@ function destinationFor(user: SessionUser): Destination | null {
   return { to: `#${PATIENT_SEARCH_ID}`, label: 'Search patients' }
 }
 
+// What the log guarantees, in one line each: the footer states it, it does not explain it.
 const LOG_FACTS = [
-  {
-    title: 'Every opening is written down',
-    body: 'Who opened a record, which record it was, and when. Reading counts, not only editing.',
-  },
-  {
-    title: 'No single party holds the log',
-    body: 'Clinics keep matching copies that are checked against each other, so an entry cannot be quietly changed or removed.',
-  },
-  {
-    title: 'Patients can read it',
-    body: 'Anyone with a record can see the full list of who has looked at it.',
-  },
+  'Every opening is logged',
+  'No single party holds the log',
+  'Patients can read who looked',
 ] as const
 
 // The router does not scroll to a hash on its own, and the nav reaches search as /#patients.
@@ -64,6 +56,7 @@ function useScrollToHash() {
 export function HomePage() {
   const { data: user } = useSession()
   useScrollToHash()
+  const journal = useOutlet()
   // RequireAuth only renders this page once the session has loaded, so this never shows.
   if (!user) return null
 
@@ -77,7 +70,8 @@ export function HomePage() {
           <LandingScene />
         </Suspense>
       </div>
-      <section className={styles.hero} aria-labelledby="home-heading">
+      {/* While a journal is open the landing is still drawn, but out of reach. */}
+      <section className={styles.hero} aria-labelledby="home-heading" inert={journal !== null}>
         <p className={styles.eyebrow}>{ROLE_LABELS[user.role]}</p>
         <h1 id="home-heading" className={styles.name}>
           {user.name}
@@ -95,22 +89,18 @@ export function HomePage() {
           </p>
         )}
       </section>
-      <div className={styles.glass}>
+      <div className={styles.glass} inert={journal !== null}>
         {canSearch && <PatientSearch />}
-        <section aria-labelledby="log-heading">
-          <h2 id="log-heading" className={styles.logHeading}>
-            How the access log works
-          </h2>
-          <ol className={styles.facts}>
+        <footer className={styles.footer}>
+          <p className={styles.footerMark}>Aletheia</p>
+          <ul className={styles.footerFacts} aria-label="How the access log works">
             {LOG_FACTS.map((fact) => (
-              <li key={fact.title} className={styles.fact}>
-                <h3 className={styles.factTitle}>{fact.title}</h3>
-                <p className={styles.factBody}>{fact.body}</p>
-              </li>
+              <li key={fact}>{fact}</li>
             ))}
-          </ol>
-        </section>
+          </ul>
+        </footer>
       </div>
+      {journal}
     </>
   )
 }
