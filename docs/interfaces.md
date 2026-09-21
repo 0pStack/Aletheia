@@ -193,9 +193,9 @@ All endpoints return HTTP status code matching the envelope state (200/201 on su
 
 ### Patient & Medical Records (SQL Database)
 
-#### 4. `GET /api/patients?q={query}`
+#### 4. `GET /api/patients?q={query}` / `GET /api/patients`
 * **Access:** `DOCTOR`, `NURSE`, `CLINIC`
-* **Query Params:** `q` (Search query by name or personal identification number)
+* **Query Params:** `q` (Search query by name or personal identification number). Optional: leaving `q` out lists patients sorted by name, capped at 50 ("view all"). A blank `q` (`?q=`) is 400 Bad Request.
 * **Success Response (`data`):**
   ```json
   [

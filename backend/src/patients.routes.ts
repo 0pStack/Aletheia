@@ -27,6 +27,9 @@ interface PatientSummary {
   personalNumber: string
 }
 
+// The unfiltered list is a browsing aid, not an export: past this many, staff search instead.
+const LIST_LIMIT = 50
+
 function escapeLikeWildcards(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`)
 }
@@ -40,6 +43,20 @@ export function createPatientsRouter(db: DatabaseType): Router {
 
   router.get('/', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
     const q = req.query.q
+
+    // Leaving q out is a deliberate "view all"; a blank q is an empty search box sent by mistake.
+    if (q === undefined) {
+      const patients = db
+        .prepare(
+          `SELECT id, name, personal_number AS personalNumber
+           FROM patients
+           ORDER BY name, id
+           LIMIT ?`,
+        )
+        .all(LIST_LIMIT) as PatientSummary[]
+
+      return ok(res, patients)
+    }
 
     if (typeof q !== 'string' || q.trim() === '') {
       return fail(res, 400, 'BAD_REQUEST', 'A search query is required.')

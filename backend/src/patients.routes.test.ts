@@ -97,9 +97,44 @@ describe('GET /api/patients access', () => {
 })
 
 describe('GET /api/patients search', () => {
-  it('returns 400 BAD_REQUEST when q is missing', async () => {
+  it('lists patients sorted by name when q is left out', async () => {
     const agent = await loginAs('doctor_dr_house')
     const res = await agent.get('/api/patients')
+
+    expect(res.status).toBe(200)
+    const names = namesOf(res)
+    expect(names).toEqual([...names].sort())
+    expect(names).toContain('Anna Andersson')
+  })
+
+  it('caps the unfiltered list at 50 patients', async () => {
+    const insert = db.prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
+    const added = Array.from({ length: 60 }, (_, index) =>
+      Number(
+        insert.run(`Zz Bulk ${index}`, `20000101-${String(index).padStart(4, '0')}`)
+          .lastInsertRowid,
+      ),
+    )
+    const agent = await loginAs('doctor_dr_house')
+
+    const res = await agent.get('/api/patients')
+
+    const removeAdded = db.prepare('DELETE FROM patients WHERE id = ?')
+    added.forEach((id) => removeAdded.run(id))
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveLength(50)
+  })
+
+  it('still refuses the unfiltered list to a PATIENT', async () => {
+    const agent = await loginAs('patient_anna')
+    const res = await agent.get('/api/patients')
+
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 400 BAD_REQUEST when q is given more than once', async () => {
+    const agent = await loginAs('doctor_dr_house')
+    const res = await agent.get('/api/patients?q=anna&q=bengt')
 
     expect(res.status).toBe(400)
     expect(res.body.error.code).toBe('BAD_REQUEST')
