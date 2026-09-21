@@ -24,7 +24,6 @@ interface NoteRow {
   created_at: string
 }
 
-
 export interface VisibleNoteRow extends NoteRow {
   author_name: string
   author_role: UserRole
