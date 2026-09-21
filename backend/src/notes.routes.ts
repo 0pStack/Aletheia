@@ -1,6 +1,6 @@
+import { logAccessEvent } from './audit-logger.js'
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router, type Response } from 'express'
-import { randomUUID } from 'node:crypto'
 import type { Blockchain } from './blockchain.js'
 import { createNote, getVisibleNotes } from './notes.js'
 import { requireRole } from './rbac.js'
@@ -69,6 +69,8 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
       visibility,
     })
 
+    logAccessEvent(req, blockchain, patientId, 'WRITE')
+
     return ok(res, note)
   })
 
@@ -81,17 +83,7 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
     }
 
     if (user.role === 'PATIENT' && user.patientId !== patientId) {
-      blockchain.addBlock([
-        {
-          id: randomUUID(),
-          patientId,
-          userId: user.id,
-          role: user.role,
-          action: 'DENIED',
-          timestamp: new Date().toISOString(),
-          serverId: 'server-1',
-        },
-      ])
+      logAccessEvent(req, blockchain, patientId, 'DENIED')
 
       return fail(res, 403, 'FORBIDDEN', 'You do not have permission to access this patient.')
     }
@@ -123,6 +115,8 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
       visibility: note.visibility,
       createdAt: toIso(note.created_at),
     }))
+
+    logAccessEvent(req, blockchain, patientId, 'READ')
 
     return ok(res, {
       patient,
