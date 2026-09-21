@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:seed": "tsx db/seed.ts"
+    "db:seed": "tsx db/seed.ts",
+    "dev:node1": "PORT=3001 PEERS=ws://localhost:3002 tsx watch src/index.ts",
+    "dev:node2": "PORT=3002 PEERS=ws://localhost:3001 tsx watch src/index.ts"
   },
   "keywords": [],
   "author": "",
