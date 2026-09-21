@@ -200,7 +200,7 @@ All endpoints return HTTP status code matching the envelope state (200/201 on su
   ```json
   [
     {
-      "id": 101,
+      "id": 1,
       "name": "Anna Andersson",
       "personalNumber": "19850101-1234"
     }
@@ -215,7 +215,7 @@ All endpoints return HTTP status code matching the envelope state (200/201 on su
   ```json
   {
     "patient": {
-      "id": 101,
+      "id": 1,
       "name": "Anna Andersson",
       "personalNumber": "19850101-1234"
     },

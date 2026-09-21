@@ -124,6 +124,13 @@
 * **Språk:** Engelska (för t.ex. klassnamn, ID:n, variabler och CSS-selektorer).
 * **Kommentarer:** Kommentera i HTML- och CSS-filerna, gärna under/vid varje funktion och komponent.
 
+### Förslag (ej beslutat — tas upp på nästa möte)
+
+* **Branch-namn:** `feature/<issue-nummer>-<kort-beskrivning>`, t.ex. `feature/55-patient-search`.
+* **Commit-meddelanden:** `typ: beskrivning` (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`). Avsluta med `Closes #N` så stängs issuen automatiskt vid merge — `(#N)` länkar bara.
+* **Filnamn (backend):** routrar heter `<resurs>.routes.ts`, övriga filer kebab-case (`audit-logger.ts`). Tester ligger bredvid filen som `<fil>.test.ts`.
+* **Formatering kontrolleras automatiskt:** CI (`.github/workflows/ci.yml`) kör `format:check`, `lint`, `typecheck` och tester på varje PR. Kör `npm run format` i paketet innan push.
+
 ---
 
 ## 9. Underskrifter
