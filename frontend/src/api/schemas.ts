@@ -38,7 +38,7 @@ export const noteSchema = z.object({
   authorRole: roleSchema,
   text: z.string(),
   visibility: noteVisibilitySchema,
-  createdAt: z.string(),
+  createdAt: z.iso.datetime(),
 })
 export type Note = z.infer<typeof noteSchema>
 

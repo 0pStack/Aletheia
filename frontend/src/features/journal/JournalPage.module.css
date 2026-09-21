@@ -1,0 +1,88 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.journal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.header {
+  padding-bottom: var(--space-8);
+  border-bottom: var(--border-hairline);
+}
+
+.header h1 {
+  margin-bottom: var(--space-2);
+}
+
+.eyebrow,
+.sectionHeading,
+.visibility {
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.eyebrow {
+  margin-bottom: var(--space-2);
+}
+
+.personalNumber {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.sectionHeading {
+  font-weight: var(--weight-regular);
+  margin-bottom: var(--space-4);
+}
+
+.empty {
+  color: var(--color-text-muted);
+}
+
+.notes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-6);
+  border-top: var(--border-hairline);
+}
+
+.note:last-child {
+  border-bottom: var(--border-hairline);
+}
+
+.noteMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.author {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.noteText {
+  max-width: 65ch;
+}
+
+.visibility {
+  align-self: flex-start;
+}
