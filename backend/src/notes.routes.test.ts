@@ -90,6 +90,33 @@ describe('POST /api/patients/:id/notes', () => {
     })
   })
 
+  it('logs a successful note write to the blockchain', async () => {
+    const agent = request.agent(app)
+
+    await agent.post('/api/auth/login').send({
+      username: 'doctor_dr_house',
+      password: PASSWORD,
+    })
+
+    const chainLengthBefore = blockchain.chain.length
+
+    const res = await agent.post(`/api/patients/${patientId}/notes`).send({
+      text: 'New audited journal note.',
+      visibility: 'STAFF',
+    })
+
+    expect(res.status).toBe(200)
+    expect(blockchain.chain.length).toBe(chainLengthBefore + 1)
+
+    const writeEvent = blockchain.getLatestBlock().data[0]
+
+    expect(writeEvent).toMatchObject({
+      patientId,
+      role: 'DOCTOR',
+      action: 'WRITE',
+    })
+  })
+
   it('rejects a patient trying to create a note', async () => {
     const agent = request.agent(app)
 
@@ -143,6 +170,34 @@ describe('GET /api/patients/:id', () => {
           visibility: 'STAFF',
         }),
       ]),
+    )
+  })
+
+  it('logs a successful patient read to the blockchain', async () => {
+    const agent = request.agent(app)
+
+    await agent.post('/api/auth/login').send({
+      username: 'doctor_dr_house',
+      password: PASSWORD,
+    })
+
+    const chainLengthBefore = blockchain.chain.length
+
+    const res = await agent.get(`/api/patients/${patientId}`)
+
+    expect(res.status).toBe(200)
+    expect(blockchain.chain.length).toBe(chainLengthBefore + 1)
+
+    const readEvent = blockchain.getLatestBlock().data[0]
+
+    expect(readEvent).toMatchObject({
+      patientId,
+      role: 'DOCTOR',
+      action: 'READ',
+    })
+
+    expect(Object.keys(readEvent ?? {}).sort()).toEqual(
+      ['action', 'id', 'patientId', 'role', 'serverId', 'timestamp', 'userId'].sort(),
     )
   })
 
