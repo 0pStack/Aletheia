@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router'
+import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router'
 import { arrivedByDive } from '../../features/auth/arrival'
 import { STAFF_ROLES } from '../../api/schemas'
 import { useLogout } from '../../features/auth/useLogout'
@@ -42,9 +42,9 @@ export function AppLayout() {
         </Link>
         <nav aria-label="Main" className={styles.nav}>
           {canSearchPatients && (
-            <NavLink to="/patients" className={styles.navLink}>
+            <Link to="/#patients" className={styles.navLink}>
               Patients
-            </NavLink>
+            </Link>
           )}
           <button type="button" className={styles.navLink} onClick={() => logout.mutate()}>
             Sign out

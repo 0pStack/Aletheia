@@ -1,0 +1,111 @@
+/* Sits on the landing page's smoked glass, so it inherits the light text tokens from there. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 44rem;
+  /* Breathing room above the heading when the nav link scrolls here. */
+  scroll-margin-top: var(--space-6);
+}
+
+.heading {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-heading);
+  letter-spacing: -0.02em;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Editorial field like sign-in: one hairline, which thickens on focus. */
+.input {
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--field-line);
+  border-radius: var(--radius-sharp);
+  background: transparent;
+  color: var(--color-text);
+  caret-color: var(--color-text);
+  font-size: var(--text-lg);
+  transition: border-color var(--duration-ui) var(--ease-glide);
+}
+
+.input::placeholder {
+  color: color-mix(in oklch, var(--color-paper) 45%, transparent);
+}
+
+.input:hover {
+  border-bottom-color: var(--color-text);
+}
+
+/* The thickened rule is the focus indicator; an inset shadow adds the second pixel without
+   shifting the layout. */
+.input:focus-visible {
+  outline: none;
+  border-bottom-color: var(--color-focus);
+  box-shadow: inset 0 -1px 0 var(--color-focus);
+}
+
+/* The browser's own clear button is a blue cross that ignores the palette. */
+.input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.hint {
+  color: var(--color-text-muted);
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Rules sit under each row only: a rule above the first would double the input's own line. */
+.result {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.name {
+  font-size: var(--text-lg);
+}
+
+.personalNumber {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.arrow {
+  transition: transform var(--duration-ui) var(--ease-glide);
+}
+
+.result:hover .arrow,
+.result:focus-visible .arrow {
+  transform: translateX(0.25rem);
+}

@@ -1,6 +1,5 @@
 import { useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router'
-import { z } from 'zod'
+import { useNavigate } from 'react-router'
 import { DIVE_ARRIVAL_STATE } from './arrival'
 import { IridescentHero } from './IridescentHero'
 import { LoginForm } from './LoginForm'
@@ -8,32 +7,16 @@ import styles from './LoginPage.module.css'
 import { useDive } from './useDive'
 import { usePointerGlow } from './usePointerGlow'
 
-const DEFAULT_REDIRECT = '/'
-
-// Shape RequireAuth puts in router state when it bounces a signed-out visitor.
-const bouncedStateSchema = z.object({
-  from: z.object({
-    // App-relative only, so router state can never send a signed-in user off-site.
-    pathname: z.string().refine((path) => path.startsWith('/') && !path.startsWith('//')),
-    search: z.string().optional(),
-    hash: z.string().optional(),
-  }),
-})
-
-function readRedirectTarget(state: unknown): string {
-  const bounced = bouncedStateSchema.safeParse(state)
-  if (!bounced.success) return DEFAULT_REDIRECT
-  const { pathname, search = '', hash = '' } = bounced.data.from
-  return `${pathname}${search}${hash}`
-}
+// Every sign-in lands on the landing scene, which is what the dive flies into; landing anywhere
+// else would cut from the dive's scenery straight to a plain page.
+const ARRIVAL_PATH = '/'
 
 export function LoginPage() {
   const panelRef = useRef<HTMLDivElement>(null)
   usePointerGlow(panelRef)
   const navigate = useNavigate()
-  const redirectTarget = readRedirectTarget(useLocation().state)
   const dive = useDive(
-    () => void navigate(redirectTarget, { replace: true, state: DIVE_ARRIVAL_STATE }),
+    () => void navigate(ARRIVAL_PATH, { replace: true, state: DIVE_ARRIVAL_STATE }),
   )
 
   return (

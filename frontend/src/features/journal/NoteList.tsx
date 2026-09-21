@@ -1,18 +1,11 @@
-import type { Note, NoteVisibility, Role } from '../../api/schemas'
+import type { Note, NoteVisibility } from '../../api/schemas'
+import { ROLE_LABELS } from '../../shared/roleLabels'
 import styles from './JournalPage.module.css'
 
 const VISIBILITY_LABELS: Record<NoteVisibility, string> = {
   ALL: 'Visible to patient',
   STAFF: 'Staff only',
   PRIVATE: 'Private',
-}
-
-const ROLE_LABELS: Record<Role, string> = {
-  DOCTOR: 'Doctor',
-  NURSE: 'Nurse',
-  CLINIC: 'Clinic',
-  PATIENT: 'Patient',
-  UNAUTHORIZED: 'Unauthorized',
 }
 
 const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })

@@ -16,7 +16,7 @@ function PatientNotFound() {
     <>
       <h1>Patient not found</h1>
       <p>
-        <Link to="/patients">Back to patients</Link>
+        <Link to="/#patients">Back to patients</Link>
       </p>
     </>
   )

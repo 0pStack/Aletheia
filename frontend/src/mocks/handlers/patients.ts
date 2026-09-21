@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockNotes, mockPatients, type MockNote, type MockUser } from '../data'
-import { notFound, requirePatientViewAccess, requireStaffAccess } from './authGuard'
+import { badRequest, notFound, requirePatientViewAccess, requireStaffAccess } from './authGuard'
 import { numericParamId } from './params'
 
 // A PATIENT only sees ALL-visibility notes. Staff see STAFF and ALL notes,
@@ -23,13 +23,15 @@ export const patientHandlers = [
     if (!guard.ok) return guard.response
 
     const query = new URL(request.url).searchParams.get('q')?.trim().toLowerCase() ?? ''
-    const results = query
-      ? mockPatients.filter(
-          (patient) =>
-            patient.name.toLowerCase().includes(query) ||
-            patient.personalNumber.toLowerCase().includes(query),
-        )
-      : mockPatients
+    // Matches the backend: an empty query is refused rather than listing every patient.
+    if (query === '') return badRequest('A search query is required.')
+
+    const digits = query.replace(/\D/g, '')
+    const results = mockPatients.filter(
+      (patient) =>
+        patient.name.toLowerCase().includes(query) ||
+        (digits !== '' && patient.personalNumber.replace(/-/g, '').includes(digits)),
+    )
 
     return HttpResponse.json({ success: true, data: results, error: null })
   }),

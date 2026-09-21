@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from 'react-router'
+import { Navigate, Outlet } from 'react-router'
 import { ApiError } from '../../api/http'
 import { useSession } from '../../features/auth/useSession'
 import { Button } from '../../shared/ui/Button/Button'
@@ -6,7 +6,6 @@ import styles from './RequireAuth.module.css'
 
 export function RequireAuth() {
   const session = useSession()
-  const location = useLocation()
 
   if (session.isPending) {
     return (
@@ -18,7 +17,7 @@ export function RequireAuth() {
 
   if (session.isError) {
     if (session.error instanceof ApiError && session.error.status === 401) {
-      return <Navigate to="/login" replace state={{ from: location }} />
+      return <Navigate to="/login" replace />
     }
     return (
       <main className={styles.state}>

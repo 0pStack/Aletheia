@@ -166,12 +166,12 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Landing page')).toBeInTheDocument()
   })
 
-  it('returns the user to the page the auth guard bounced them from', async () => {
+  it('lands on the landing scene even when the auth guard bounced them from a journal', async () => {
     renderLoginPage({ from: '/patients/2' })
 
     await signIn('nurse_jackie', 'Password123!')
 
-    expect(await screen.findByText('Journal')).toBeInTheDocument()
+    expect(await screen.findByText('Landing page')).toBeInTheDocument()
   })
 
   it('reports wrong credentials and stays on the form', async () => {

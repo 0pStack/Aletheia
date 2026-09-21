@@ -16,6 +16,10 @@ export function forbidden(): Response {
   return errorResponse(403, 'FORBIDDEN', 'Not allowed for this role')
 }
 
+export function badRequest(message: string): Response {
+  return errorResponse(400, 'BAD_REQUEST', message)
+}
+
 export function notFound(message = 'Patient not found'): Response {
   return errorResponse(404, 'NOT_FOUND', message)
 }

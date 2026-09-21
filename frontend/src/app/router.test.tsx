@@ -45,7 +45,7 @@ describe('app routes', () => {
 
     renderAt('/patients')
 
-    expect(await screen.findByRole('heading', { name: /patients/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Patients' })).toBeInTheDocument()
   })
 
   it('greets a signed-in user by name on the landing page with a way into their task', async () => {
@@ -58,14 +58,14 @@ describe('app routes', () => {
     ).toBeVisible()
     expect(screen.getByRole('link', { name: /search patients/i })).toHaveAttribute(
       'href',
-      '/patients',
+      '/#patients',
     )
   })
 
   it('signs the user out and returns to the sign-in page', async () => {
     server.use(http.get('*/api/auth/session', signedIn))
     const router = renderAt('/patients')
-    await screen.findByRole('heading', { name: /patients/i })
+    await screen.findByRole('heading', { name: 'Patients' })
 
     await userEvent.click(screen.getByRole('button', { name: /sign out/i }))
 
@@ -93,7 +93,7 @@ describe('app routes', () => {
     server.use(http.get('*/api/auth/session', signedIn))
     await userEvent.click(screen.getByRole('button', { name: /try again/i }))
 
-    expect(await screen.findByRole('heading', { name: /patients/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Patients' })).toBeInTheDocument()
   })
 
   it('keeps the app navigation on an unknown page for a signed-in user', async () => {

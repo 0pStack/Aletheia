@@ -50,12 +50,15 @@ describe('GET /api/patients', () => {
     expect(error).toMatchObject({ status: 403, code: 'FORBIDDEN' })
   })
 
-  it('returns every patient when q is empty', async () => {
+  it('is 400 BAD_REQUEST when q is empty, like the backend', async () => {
     await login('doctor_dr_house', 'Password123!')
 
-    const results = await request('/api/patients', patientListSchema)
+    const error: unknown = await request('/api/patients', patientListSchema).catch(
+      (caught: unknown) => caught,
+    )
 
-    expect(results.length).toBeGreaterThanOrEqual(3)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 400, code: 'BAD_REQUEST' })
   })
 
   it('searches by name, case-insensitively', async () => {

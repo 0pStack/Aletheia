@@ -122,39 +122,48 @@
   transform: translateX(0.3rem);
 }
 
-.log {
-  /* Same smoked glass as the sign-in panel, so the text and border tokens flip to light here. */
+/* Everything below the scene sits on one sheet of smoked glass, the same as the sign-in panel,
+   so the same tokens flip to light here. All five must flip: leaving focus or border on their
+   paper-page values draws near-black lines on the dark glass. */
+.glass {
   --color-text: var(--color-paper);
   --color-text-muted: color-mix(in oklch, var(--color-paper) 78%, transparent);
-  --log-fade: 7rem;
+  --color-border: var(--color-paper);
+  --color-focus: var(--color-paper);
+  --color-divider: color-mix(in oklch, var(--color-paper) 20%, transparent);
+  --field-line: color-mix(in oklch, var(--color-paper) 32%, transparent);
+  --glass-fade: 7rem;
 
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--space-12), 12vh, 8rem);
   padding: clamp(var(--space-12), 12vh, 8rem) clamp(var(--space-6), 6vw, 6rem);
-  padding-top: calc(var(--log-fade) + var(--space-6));
+  padding-top: calc(var(--glass-fade) + var(--space-6));
   color: var(--color-text);
 }
 
-/* The glass comes up out of the scene instead of starting on a line, and the heading sits below
-   the rise. The rise only darkens; the blur starts under it, where the tint is already deep
+/* The glass comes up out of the scene instead of starting on a line, and the first heading sits
+   below the rise. The rise only darkens; the blur starts under it, where the tint is already deep
    enough to hide the line where it begins. Masking one blurred box would be shorter, but Safari
    blurs the whole box and masks only the tint, and stacked bands of growing blur show as
    stripes. */
-.log::before {
+.glass::before {
   content: '';
   position: absolute;
-  inset: var(--log-fade) 0 0;
+  inset: var(--glass-fade) 0 0;
   z-index: -1;
   background: color-mix(in oklch, var(--color-obsidian) 86%, transparent);
   backdrop-filter: blur(32px) saturate(1.2);
 }
 
-.log::after {
+.glass::after {
   content: '';
   position: absolute;
   inset: 0 0 auto;
   z-index: -1;
-  height: var(--log-fade);
+  height: var(--glass-fade);
   pointer-events: none;
   background: linear-gradient(
     to bottom,
@@ -166,11 +175,11 @@
 
 @supports not (backdrop-filter: blur(1px)) {
   .action,
-  .log::before {
+  .glass::before {
     background: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
   }
 
-  .log::after {
+  .glass::after {
     background: linear-gradient(
       to bottom,
       transparent,
@@ -186,6 +195,7 @@
 .logHeading {
   font-size: var(--text-2xl);
   font-weight: var(--weight-light);
+  line-height: var(--leading-heading);
   letter-spacing: -0.02em;
 }
 

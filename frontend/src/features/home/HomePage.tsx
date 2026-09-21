@@ -1,7 +1,10 @@
-import { lazy, Suspense, type ComponentType } from 'react'
-import { Link } from 'react-router'
-import type { Role, SessionUser } from '../../api/schemas'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
+import { Link, useLocation } from 'react-router'
+import { STAFF_ROLES, type SessionUser } from '../../api/schemas'
+import { allowsMotion } from '../../shared/motion/allowsMotion'
+import { ROLE_LABELS } from '../../shared/roleLabels'
 import { useSession } from '../auth/useSession'
+import { PATIENT_SEARCH_ID, PatientSearch } from '../patients/PatientSearch'
 import styles from './HomePage.module.css'
 
 // three.js is only needed here, so it stays out of the bundle the login page loads. The scene is
@@ -16,14 +19,6 @@ const LandingScene = lazy<ComponentType>(() =>
     }),
 )
 
-const ROLE_LABELS: Record<Role, string> = {
-  DOCTOR: 'Doctor',
-  NURSE: 'Nurse',
-  CLINIC: 'Clinic staff',
-  PATIENT: 'Patient',
-  UNAUTHORIZED: 'Awaiting access',
-}
-
 interface Destination {
   to: string
   label: string
@@ -36,7 +31,7 @@ function destinationFor(user: SessionUser): Destination | null {
       ? null
       : { to: `/patients/${user.patientId}`, label: 'Open my record' }
   }
-  return { to: '/patients', label: 'Search patients' }
+  return { to: `#${PATIENT_SEARCH_ID}`, label: 'Search patients' }
 }
 
 const LOG_FACTS = [
@@ -54,12 +49,26 @@ const LOG_FACTS = [
   },
 ] as const
 
+// The router does not scroll to a hash on its own, and the nav reaches search as /#patients.
+// Keyed on the navigation too, so following the same link again scrolls back down.
+function useScrollToHash() {
+  const { hash, key } = useLocation()
+  useEffect(() => {
+    if (hash === '') return
+    document
+      .getElementById(hash.slice(1))
+      ?.scrollIntoView({ behavior: allowsMotion() ? 'smooth' : 'auto' })
+  }, [hash, key])
+}
+
 export function HomePage() {
   const { data: user } = useSession()
+  useScrollToHash()
   // RequireAuth only renders this page once the session has loaded, so this never shows.
   if (!user) return null
 
   const destination = destinationFor(user)
+  const canSearch = STAFF_ROLES.includes(user.role)
 
   return (
     <>
@@ -86,19 +95,22 @@ export function HomePage() {
           </p>
         )}
       </section>
-      <section className={styles.log} aria-labelledby="log-heading">
-        <h2 id="log-heading" className={styles.logHeading}>
-          How the access log works
-        </h2>
-        <ol className={styles.facts}>
-          {LOG_FACTS.map((fact) => (
-            <li key={fact.title} className={styles.fact}>
-              <h3 className={styles.factTitle}>{fact.title}</h3>
-              <p className={styles.factBody}>{fact.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <div className={styles.glass}>
+        {canSearch && <PatientSearch />}
+        <section aria-labelledby="log-heading">
+          <h2 id="log-heading" className={styles.logHeading}>
+            How the access log works
+          </h2>
+          <ol className={styles.facts}>
+            {LOG_FACTS.map((fact) => (
+              <li key={fact.title} className={styles.fact}>
+                <h3 className={styles.factTitle}>{fact.title}</h3>
+                <p className={styles.factBody}>{fact.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
     </>
   )
 }

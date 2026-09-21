@@ -47,11 +47,17 @@
   font-size: var(--text-md);
 }
 
-.main:focus {
+/* Focus moves here after sign-in and from the skip link. Only the ring for pointer-driven focus is
+   hidden; keyboard users still see where they landed. */
+.main:focus:not(:focus-visible) {
   outline: none;
 }
 
 .navLink {
+  /* The label is 12px; the box around it keeps the hit area at the 24px minimum. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-6);
   font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
