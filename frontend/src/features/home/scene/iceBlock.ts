@@ -367,7 +367,7 @@ export function createIceBlock(
       pulse.value = breath
       lensClock.value = time * LENS_DRIFT
       // Opened, the light inside answers: it is what the gap is opening onto.
-      lensGain.value = (0.62 + 0.40 * breath) * (1 + 1.2 * open)
+      lensGain.value = (0.62 + 0.4 * breath) * (1 + 1.2 * open)
       lamp.intensity = (9 + 14 * breath) * (1 + 0.6 * lift + 1.2 * open)
     },
     dispose() {
