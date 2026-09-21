@@ -5,6 +5,7 @@ import { createAuthRouter } from './auth.routes.js'
 import { Blockchain } from './blockchain.js'
 import { db as defaultDb } from './db.js'
 import { createNotesRouter } from './notes.routes.js'
+import { createPatientsRouter } from './patients.routes.js'
 
 export interface CreateAppOptions {
   db?: DatabaseType
@@ -42,6 +43,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.use('/api/auth', createAuthRouter(db))
   app.use('/api/patients', createNotesRouter(db, blockchain))
+  app.use('/api/patients', createPatientsRouter(db))
 
   return app
 }
