@@ -1,7 +1,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router } from 'express'
-import { requireRole } from './rbac.js'
-import { fail, ok } from './envelope.js'
+import { requireRole } from '../rbac.js'
+import { fail, ok } from '../envelope.js'
 
 interface PatientSummary {
   id: number

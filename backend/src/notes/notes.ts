@@ -1,5 +1,5 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
-import type { UserRole } from './auth.js'
+import type { UserRole } from '../auth/auth.js'
 
 interface NoteViewer {
   id: number

@@ -1,7 +1,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router } from 'express'
 import { findUserByUsername, toSessionUser, verifyPassword } from './auth.js'
-import { fail, ok } from './envelope.js'
+import { fail, ok } from '../envelope.js'
 
 export function createAuthRouter(db: DatabaseType): Router {
   const router = Router()
