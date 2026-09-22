@@ -1,28 +1,10 @@
 import { logAccessEvent } from './audit-logger.js'
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { Router, type Response } from 'express'
+import { Router } from 'express'
 import type { Blockchain } from './chain/blockchain.js'
 import { createNote, getVisibleNotes } from './notes.js'
 import { requireRole } from './rbac.js'
-
-function ok<T>(res: Response, data: T): Response {
-  return res.status(200).json({
-    success: true,
-    data,
-    error: null,
-  })
-}
-
-function fail(res: Response, status: number, code: string, message: string): Response {
-  return res.status(status).json({
-    success: false,
-    data: null,
-    error: {
-      code,
-      message,
-    },
-  })
-}
+import { fail, ok } from './envelope.js'
 
 interface Patient {
   id: number

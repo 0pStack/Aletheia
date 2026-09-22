@@ -1,25 +1,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { Router, type Response } from 'express'
+import { Router } from 'express'
 import { requireRole } from './rbac.js'
-
-function ok<T>(res: Response, data: T): Response {
-  return res.status(200).json({
-    success: true,
-    data,
-    error: null,
-  })
-}
-
-function fail(res: Response, status: number, code: string, message: string): Response {
-  return res.status(status).json({
-    success: false,
-    data: null,
-    error: {
-      code,
-      message,
-    },
-  })
-}
+import { fail, ok } from './envelope.js'
 
 interface PatientSummary {
   id: number
@@ -27,7 +9,6 @@ interface PatientSummary {
   personalNumber: string
 }
 
-// The unfiltered list is a browsing aid, not an export: past this many, staff search instead.
 const LIST_LIMIT = 50
 
 function escapeLikeWildcards(value: string): string {
@@ -44,7 +25,6 @@ export function createPatientsRouter(db: DatabaseType): Router {
   router.get('/', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
     const q = req.query.q
 
-    // Leaving q out is a deliberate "view all"; a blank q is an empty search box sent by mistake.
     if (q === undefined) {
       const patients = db
         .prepare(
