@@ -3,7 +3,7 @@ import {
   hasOnlyAllowedAccessEventFields,
   hasOnlyAllowedBlockchainPayloadFields,
 } from './payload-security.js'
-import { Blockchain } from '../blockchain.js'
+import { Blockchain } from './blockchain.js'
 
 describe('blockchain payload security', () => {
   it('rejects an access event containing a non-whitelisted field', () => {

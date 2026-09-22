@@ -1,5 +1,5 @@
-import { Block } from './chain/block.js'
-import type { AccessEvent } from './chain/access-event.js'
+import { Block } from './block.js'
+import type { AccessEvent } from './access-event.js'
 
 export class Blockchain {
   public chain: Block[]

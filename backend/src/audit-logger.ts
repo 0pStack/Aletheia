@@ -1,6 +1,6 @@
 import type { Request } from 'express'
 import { randomUUID } from 'node:crypto'
-import type { Blockchain } from './blockchain.js'
+import type { Blockchain } from './chain/blockchain.js'
 import type { AccessEvent } from './chain/access-event.js'
 
 export function logAccessEvent(

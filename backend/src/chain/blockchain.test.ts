@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Blockchain } from './blockchain.js'
-import type { AccessEvent } from './chain/access-event.js'
+import type { AccessEvent } from './access-event.js'
 
 const testEvent: AccessEvent = {
   id: 'event-1',
