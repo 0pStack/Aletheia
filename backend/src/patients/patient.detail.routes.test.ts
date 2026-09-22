@@ -7,6 +7,8 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
+import { Blockchain } from '../chain/blockchain.js'
+import { hasOnlyAllowedBlockchainPayloadFields } from '../chain/payload-security.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
@@ -25,6 +27,7 @@ const NOTE_FIELDS = [
 
 let db: DatabaseType
 let app: Express
+let blockchain: Blockchain
 let annaId: number
 let bengtId: number
 let doctorId: number
@@ -49,6 +52,7 @@ beforeAll(() => {
     insertUser.run('doctor_dr_house', passwordHash, 'Dr. Gregory House', 'DOCTOR', null)
       .lastInsertRowid,
   )
+
   insertUser.run('patient_anna', passwordHash, 'Anna Andersson', 'PATIENT', annaId)
   insertUser.run('unauth_user', passwordHash, 'Eve Stranded', 'UNAUTHORIZED', null)
 
@@ -57,7 +61,8 @@ beforeAll(() => {
      VALUES (?, ?, ?, ?)`,
   ).run(annaId, doctorId, 'Mild fever. Prescribed rest.', 'ALL')
 
-  app = createApp({ db })
+  blockchain = new Blockchain()
+  app = createApp({ db, blockchain })
 })
 
 afterAll(() => {
@@ -66,7 +71,10 @@ afterAll(() => {
 
 async function loginAs(username: string) {
   const agent = request.agent(app)
-  await agent.post('/api/auth/login').send({ username, password: PASSWORD })
+  await agent.post('/api/auth/login').send({
+    username,
+    password: PASSWORD,
+  })
   return agent
 }
 
@@ -158,5 +166,24 @@ describe('GET /api/patients/:id response shape', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.data.notes).toEqual([])
+  })
+})
+
+describe('blockchain patient data protection', () => {
+  it('does not write patient data to the blockchain after a patient read', async () => {
+    const agent = await loginAs('doctor_dr_house')
+
+    const res = await agent.get(`/api/patients/${annaId}`)
+
+    expect(res.status).toBe(200)
+
+    expect(hasOnlyAllowedBlockchainPayloadFields(blockchain.chain)).toBe(true)
+
+    const blockchainContent = JSON.stringify(blockchain.chain)
+
+    expect(blockchainContent).not.toContain('Anna Andersson')
+    expect(blockchainContent).not.toContain('19850101-1234')
+    expect(blockchainContent).not.toContain('Mild fever. Prescribed rest.')
+    expect(blockchainContent).not.toContain('Dr. Gregory House')
   })
 })
