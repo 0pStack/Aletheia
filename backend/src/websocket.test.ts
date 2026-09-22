@@ -95,4 +95,45 @@ describe('attachWebSocketServer', () => {
     webSocketServer.close()
     server.close()
   })
+
+  it('does not crash when receiving invalid JSON', async () => {
+    const server = createServer()
+    const webSocketServer = attachWebSocketServer(server)
+    const consoleInfo = vi
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined)
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    socket.send('this is not valid JSON')
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(consoleInfo).toHaveBeenCalledWith('Invalid WebSocket message')
+
+    expect(socket.readyState).toBe(WebSocket.OPEN)
+
+    socket.close()
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve())
+    })
+
+    consoleInfo.mockRestore()
+    webSocketServer.close()
+    server.close()
+  })
 })
