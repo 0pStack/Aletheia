@@ -5,11 +5,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createApp } from './app.js'
+import { createApp } from '../app.js'
 import { hashPassword } from './auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SCHEMA_PATH = join(__dirname, '../db/schema.sql')
+const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
 const PASSWORD = 'Password123!'
 
 let db: DatabaseType

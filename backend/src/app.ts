@@ -1,11 +1,11 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
 import express, { type Express } from 'express'
 import session from 'express-session'
-import { createAuthRouter } from './auth.routes.js'
-import { Blockchain } from './blockchain.js'
+import { createAuthRouter } from './auth/auth.routes.js'
+import { Blockchain } from './chain/blockchain.js'
 import { db as defaultDb } from './db.js'
-import { createNotesRouter } from './notes.routes.js'
-import { createPatientsRouter } from './patients.routes.js'
+import { createNotesRouter } from './notes/notes.routes.js'
+import { createPatientsRouter } from './patients/patients.routes.js'
 
 export interface CreateAppOptions {
   db?: DatabaseType
@@ -43,7 +43,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.use('/api/auth', createAuthRouter(db))
   app.use('/api/patients', createNotesRouter(db, blockchain))
-  app.use('/api/patients', createPatientsRouter(db))
+  app.use('/api/patients', createPatientsRouter(db, blockchain))
 
   return app
 }
