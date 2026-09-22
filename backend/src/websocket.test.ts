@@ -54,4 +54,45 @@ describe('attachWebSocketServer', () => {
     webSocketServer.close()
     server.close()
   })
+
+  it('parses a JSON message and reads its type', async () => {
+    const server = createServer()
+    const webSocketServer = attachWebSocketServer(server)
+    const consoleInfo = vi
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined)
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(consoleInfo).toHaveBeenCalledWith(
+      'WebSocket message received: CHAIN_REQUEST',
+    )
+
+    socket.close()
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve())
+    })
+
+    consoleInfo.mockRestore()
+    webSocketServer.close()
+    server.close()
+  })
 })

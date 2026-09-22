@@ -15,6 +15,18 @@ export function attachWebSocketServer(server: Server): WebSocketServer {
   webSocketServer.on('connection', (socket) => {
     console.info('WebSocket client connected')
 
+    socket.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString()) as {
+          type?: WebSocketMessageType
+        }
+
+        console.info(`WebSocket message received: ${message.type}`)
+      } catch {
+        console.info('Invalid WebSocket message')
+      }
+    })
+
     socket.on('close', () => {
       console.info('WebSocket client disconnected')
     })
