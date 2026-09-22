@@ -18,9 +18,7 @@ describe('attachWebSocketServer', () => {
   it('logs when a client connects and disconnects', async () => {
     const server = createServer()
     const webSocketServer = attachWebSocketServer(server)
-    const consoleInfo = vi
-      .spyOn(console, 'info')
-      .mockImplementation(() => undefined)
+    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
@@ -42,13 +40,9 @@ describe('attachWebSocketServer', () => {
 
     socket.close()
 
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve())
+    await vi.waitFor(() => {
+      expect(consoleInfo).toHaveBeenCalledWith('WebSocket client disconnected')
     })
-
-    expect(consoleInfo).toHaveBeenCalledWith(
-      'WebSocket client disconnected',
-    )
 
     consoleInfo.mockRestore()
     webSocketServer.close()
@@ -58,9 +52,7 @@ describe('attachWebSocketServer', () => {
   it('parses a JSON message and reads its type', async () => {
     const server = createServer()
     const webSocketServer = attachWebSocketServer(server)
-    const consoleInfo = vi
-      .spyOn(console, 'info')
-      .mockImplementation(() => undefined)
+    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
@@ -82,9 +74,7 @@ describe('attachWebSocketServer', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 20))
 
-    expect(consoleInfo).toHaveBeenCalledWith(
-      'WebSocket message received: CHAIN_REQUEST',
-    )
+    expect(consoleInfo).toHaveBeenCalledWith('WebSocket message received: CHAIN_REQUEST')
 
     socket.close()
     await new Promise<void>((resolve) => {
@@ -99,9 +89,7 @@ describe('attachWebSocketServer', () => {
   it('does not crash when receiving invalid JSON', async () => {
     const server = createServer()
     const webSocketServer = attachWebSocketServer(server)
-    const consoleInfo = vi
-      .spyOn(console, 'info')
-      .mockImplementation(() => undefined)
+    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
