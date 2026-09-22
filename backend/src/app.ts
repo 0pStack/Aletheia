@@ -43,7 +43,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.use('/api/auth', createAuthRouter(db))
   app.use('/api/patients', createNotesRouter(db, blockchain))
-  app.use('/api/patients', createPatientsRouter(db))
+  app.use('/api/patients', createPatientsRouter(db, blockchain))
 
   return app
 }
