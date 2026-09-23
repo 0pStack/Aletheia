@@ -29,6 +29,39 @@ export interface VisibleNoteRow extends NoteRow {
   author_role: UserRole
 }
 
+// The note as docs/interfaces.md defines it: camelCase, an author to show, an ISO timestamp.
+export interface NoteResponse {
+  id: number
+  authorId: number
+  authorName: string
+  authorRole: UserRole
+  text: string
+  visibility: NoteVisibility
+  createdAt: string
+}
+
+// SQLite writes 'YYYY-MM-DD HH:MM:SS' in UTC; the API speaks ISO everywhere.
+function toIso(sqliteDate: string): string {
+  if (sqliteDate.includes('T')) return sqliteDate
+  return new Date(`${sqliteDate.replace(' ', 'T')}Z`).toISOString()
+}
+
+export function toNoteResponse(row: VisibleNoteRow): NoteResponse {
+  return {
+    id: row.id,
+    authorId: row.author_id,
+    authorName: row.author_name,
+    authorRole: row.author_role,
+    text: row.text,
+    visibility: row.visibility,
+    createdAt: toIso(row.created_at),
+  }
+}
+
+export function patientExists(db: DatabaseType, patientId: number): boolean {
+  return db.prepare('SELECT 1 FROM patients WHERE id = ?').get(patientId) !== undefined
+}
+
 export function createNote(db: DatabaseType, input: CreateNoteInput): NoteRow {
   const result = db
     .prepare(

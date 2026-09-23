@@ -4,7 +4,7 @@ import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
 import { fail, ok } from '../envelope.js'
 import { requireRole } from '../rbac.js'
-import { createNote } from './notes.js'
+import { createNote, patientExists, toNoteResponse } from './notes.js'
 
 export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Router {
   const router = Router()
@@ -33,6 +33,12 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
       return fail(res, 400, 'BAD_REQUEST', 'Valid patient, text and visibility are required.')
     }
 
+    // Without this the insert fails on the foreign key, which used to surface as an
+    // HTML error page instead of an envelope.
+    if (!patientExists(db, patientId)) {
+      return fail(res, 404, 'NOT_FOUND', 'Patient not found.')
+    }
+
     const note = createNote(db, {
       patientId,
       authorId: user.id,
@@ -42,7 +48,8 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
 
     logAccessEvent(req, blockchain, patientId, 'WRITE')
 
-    return ok(res, note)
+    // The author is whoever is signed in, so the row does not need joining back to users.
+    return ok(res, toNoteResponse({ ...note, author_name: user.name, author_role: user.role }))
   })
 
   return router

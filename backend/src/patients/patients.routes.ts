@@ -3,7 +3,7 @@ import { Router } from 'express'
 import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
 import { fail, ok } from '../envelope.js'
-import { getVisibleNotes } from '../notes/notes.js'
+import { getVisibleNotes, toNoteResponse } from '../notes/notes.js'
 import { requireRole } from '../rbac.js'
 
 interface PatientSummary {
@@ -20,11 +20,6 @@ function escapeLikeWildcards(value: string): string {
 
 function digitsOnly(value: string): string {
   return value.replace(/\D/g, '')
-}
-
-function toIso(sqliteDate: string): string {
-  if (sqliteDate.includes('T')) return sqliteDate
-  return new Date(`${sqliteDate.replace(' ', 'T')}Z`).toISOString()
 }
 
 export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): Router {
@@ -100,15 +95,7 @@ export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): 
     const notes = getVisibleNotes(db, patientId, {
       id: user.id,
       role: user.role,
-    }).map((note) => ({
-      id: note.id,
-      authorId: note.author_id,
-      authorName: note.author_name,
-      authorRole: note.author_role,
-      text: note.text,
-      visibility: note.visibility,
-      createdAt: toIso(note.created_at),
-    }))
+    }).map(toNoteResponse)
 
     logAccessEvent(req, blockchain, patientId, 'READ')
 
