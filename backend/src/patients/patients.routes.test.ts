@@ -7,6 +7,7 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
+import { generateKeyPair } from '../chain/keypair.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
@@ -40,7 +41,7 @@ beforeAll(() => {
   insertUser.run('patient_anna', passwordHash, 'Anna Andersson', 'PATIENT', annaId)
   insertUser.run('unauth_user', passwordHash, 'Eve Stranded', 'UNAUTHORIZED', null)
 
-  app = createApp({ db })
+  app = createApp({ db, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {

@@ -86,7 +86,7 @@ Medical data stays in SQL. The blockchain stores the audit information needed to
 
 When creating medical notes (`POST /api/patients/:id/notes`), the author chooses one of the following:
 
-* `PRIVATE` — Only visible to the author who created the note.
+* `PRIVATE` — Only the author can read the text. Other healthcare staff see that the note exists, who wrote it and when, but never its contents; a patient sees nothing at all. See *Redacted notes* under endpoint 5.
 * `STAFF` — Visible to all healthcare staff (`DOCTOR`, `NURSE`, `CLINIC`).
 * `ALL` — Visible to healthcare staff and the patient themselves.
 
@@ -249,6 +249,21 @@ All endpoints return HTTP status code matching the envelope state (200/201 on su
   }
   ```
 * *Filtering Rule:* Notes are filtered in SQLite based on caller role before returning. A `PATIENT` only receives notes with visibility `ALL`.
+* *Redacted notes:* Every note carries a `redacted` flag. A note the caller may read has `redacted: false` and a `text`. A `PRIVATE` note written by another staff member reaches healthcare staff as a stub, so a gap in the list is never silent:
+
+  ```json
+  {
+    "id": 3,
+    "authorId": 5,
+    "authorName": "Dr. Sven Svensson",
+    "authorRole": "DOCTOR",
+    "visibility": "PRIVATE",
+    "createdAt": "2026-09-15T10:00:00.000Z",
+    "redacted": true
+  }
+  ```
+
+  A stub has **no `text` field at all** — the query never selects the text for a caller who may not read it. A `PATIENT` receives no stubs; whether they should is an open group decision (issue #83).
 
 #### 6. `POST /api/patients/:id/notes`
 * **Access:** `DOCTOR`, `NURSE`, `CLINIC`

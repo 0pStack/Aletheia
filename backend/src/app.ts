@@ -4,6 +4,7 @@ import session from 'express-session'
 import { createAccessLogRouter } from './access-log/access-log.routes.js'
 import { createAuthRouter } from './auth/auth.routes.js'
 import { Blockchain } from './chain/blockchain.js'
+import type { KeyPair } from './chain/keypair.js'
 import { db as defaultDb } from './db.js'
 import { createNotesRouter } from './notes/notes.routes.js'
 import { createPatientsRouter } from './patients/patients.routes.js'
@@ -29,9 +30,10 @@ export function envelopeErrors(
 export interface CreateAppOptions {
   db?: DatabaseType
   blockchain?: Blockchain
+  keyPair: KeyPair
 }
 
-export function createApp(options: CreateAppOptions = {}): Express {
+export function createApp(options: CreateAppOptions): Express {
   const db = options.db ?? defaultDb
   const blockchain = options.blockchain ?? new Blockchain()
   const app = express()
@@ -65,9 +67,9 @@ export function createApp(options: CreateAppOptions = {}): Express {
   })
 
   app.use('/api/auth', createAuthRouter(db))
-  app.use('/api/patients', createNotesRouter(db, blockchain))
-  app.use('/api/patients', createAccessLogRouter(db, blockchain))
-  app.use('/api/patients', createPatientsRouter(db, blockchain))
+  app.use('/api/patients', createNotesRouter(db, blockchain, options.keyPair))
+  app.use('/api/patients', createAccessLogRouter(db, blockchain, options.keyPair))
+  app.use('/api/patients', createPatientsRouter(db, blockchain, options.keyPair))
 
   // Last, so it sees anything the routes above throw.
   app.use(envelopeErrors)
