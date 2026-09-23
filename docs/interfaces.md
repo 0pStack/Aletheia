@@ -14,16 +14,22 @@ The blockchain is used only for audit logging. Medical journal content must rema
 
 The following fields are allowed in an audit block:
 
+* `id` — unique event identifier (UUID)
 * `patientId` — internal patient identifier
 * `userId` — internal user identifier
-* `action` — type of action performed, for example `VIEW_RECORD` or `CREATE_NOTE`
+* `role` — the user's role at the time of access. Stored on-chain so the log stays truthful even if the user's role changes or the account is removed from SQL.
+* `action` — type of action performed: `READ`, `WRITE` or `DENIED`
 * `timestamp` — time when the action occurred
 * `serverId` — identifier of the server that created the audit event
+* `signature` — signature of the event (optional until signing is in place)
+* `publicKey` — public key of the signing node (optional until signing is in place)
 
 The block itself may also contain technical blockchain fields:
 
 * `index`
+* `timestamp`
 * `previousHash`
+* `merkleRoot`
 * `hash`
 * `nonce`
 
@@ -44,9 +50,11 @@ The following data must remain in the SQL database:
 
 ```json
 {
+  "id": "b3e6c0f3-8f0a-4b68-9a3f-a3d8a1c92a91",
   "patientId": 123,
   "userId": 45,
-  "action": "VIEW_RECORD",
+  "role": "DOCTOR",
+  "action": "READ",
   "timestamp": "2026-09-15T18:30:00.000Z",
   "serverId": "server-1"
 }
@@ -134,14 +142,22 @@ Defines the structure of each block in the chain:
 ```typescript
 interface Block {
   index: number;
-  timestamp: string;                                  
-  data: AccessEvent[];                                 
-  previousHash: string;                                
-  hash: string;                                        
+  timestamp: string;
+  data: AccessEvent[];
+  previousHash: string;        
+  hash: string;                 
   nonce: number;
-  merkleRoot?: string;                                
+  merkleRoot: string;       
 }
 ```
+
+**Hashing and batching:**
+
+* A block holds **one or more** events. Code reading the chain must loop over every event in `block.data`, not assume one.
+* Events wait in a pending list and are turned into a block in batches. The running node is configured (in `index.ts`) to make a block when 5 events are collected or after 2 seconds, whichever comes first. `Blockchain`'s own default is one block per event, which is what the tests use. Until an event is in a block it is *pending* and not yet on the chain.
+* Each event is a Merkle leaf: `sha256(stableStringify(event))` (keys sorted). A pair is combined as `sha256(left + right)` on hex strings. An odd level duplicates its last hash. A block with no events has the root `sha256('')`.
+* The block hash covers `index`, `timestamp`, `merkleRoot`, `previousHash` and `nonce`. It covers the events **through** the Merkle root, so `isChainValid` recomputes the root from `data`.
+* Known limitation: pending events are lost if the node stops before they are flushed. The fix is to flush pending events on shutdown, which only has an effect once the chain is saved to disk.
 
 ---
 

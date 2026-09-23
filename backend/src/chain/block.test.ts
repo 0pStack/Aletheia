@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
+import { calculateMerkleRoot } from './merkle.js'
 
 const event: AccessEvent = {
   id: 'event-1',
@@ -26,5 +27,18 @@ describe('Block', () => {
     block.nonce = 1
 
     expect(block.calculateHash()).not.toBe(block.hash)
+  })
+
+  it('stores the Merkle root of its events', () => {
+    const block = new Block(1, event.timestamp, [event], 'previous-hash', 0)
+
+    expect(block.merkleRoot).toBe(calculateMerkleRoot([event]))
+  })
+
+  it('gets a different hash when its events differ', () => {
+    const block1 = new Block(1, event.timestamp, [event], 'previous-hash', 0)
+    const block2 = new Block(1, event.timestamp, [{ ...event, userId: 6 }], 'previous-hash', 0)
+
+    expect(block1.hash).not.toBe(block2.hash)
   })
 })

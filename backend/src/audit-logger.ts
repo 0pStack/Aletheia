@@ -25,5 +25,5 @@ export function logAccessEvent(
     serverId: 'server-1',
   }
 
-  blockchain.addBlock([event])
+  blockchain.addEvent(event)
 }
