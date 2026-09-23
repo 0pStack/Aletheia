@@ -1,6 +1,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import session from 'express-session'
+import { createAccessLogRouter } from './access-log/access-log.routes.js'
 import { createAuthRouter } from './auth/auth.routes.js'
 import { Blockchain } from './chain/blockchain.js'
 import { db as defaultDb } from './db.js'
@@ -65,6 +66,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.use('/api/auth', createAuthRouter(db))
   app.use('/api/patients', createNotesRouter(db, blockchain))
+  app.use('/api/patients', createAccessLogRouter(db, blockchain))
   app.use('/api/patients', createPatientsRouter(db, blockchain))
 
   // Last, so it sees anything the routes above throw.
