@@ -49,7 +49,15 @@ The wire format for every endpoint is in [docs/interfaces.md](docs/interfaces.md
 
 ## Screenshots
 
-_To be added before hand-in: the login page, a doctor's journal with the access log, the same record as the patient, and the access-denied page._
+![The login page](docs/screenshots/01-login.png)
+
+Signing in. The line under the form is the promise the rest of the app keeps: every time a record is opened, it is logged permanently.
+
+![The landing page, signed in as a doctor](docs/screenshots/02-landing.png)
+
+Staff arrive here, greeted by name and role, with the search one step away.
+
+_Still to add before hand-in: a journal with its access log, the same record seen by the patient, and the access-denied page._
 
 ## Backend setup
 
