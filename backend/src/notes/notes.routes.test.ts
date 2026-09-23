@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
+import { generateKeyPair } from '../chain/keypair.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
@@ -60,7 +61,7 @@ beforeAll(() => {
 
   blockchain = new Blockchain()
 
-  app = createApp({ db, blockchain })
+  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {
@@ -249,7 +250,17 @@ describe('GET /api/patients/:id', () => {
     })
 
     expect(Object.keys(readEvent ?? {}).sort()).toEqual(
-      ['action', 'id', 'patientId', 'role', 'serverId', 'timestamp', 'userId'].sort(),
+      [
+        'action',
+        'id',
+        'patientId',
+        'publicKey',
+        'role',
+        'serverId',
+        'signature',
+        'timestamp',
+        'userId',
+      ].sort(),
     )
   })
 
