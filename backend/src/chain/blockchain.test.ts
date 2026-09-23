@@ -50,6 +50,33 @@ describe('Blockchain', () => {
 
     expect(blockchain.isChainValid()).toBe(false)
   })
+
+  it('creates the same genesis block every time', () => {
+    expect(new Blockchain().chain[0]?.hash).toBe(new Blockchain().chain[0]?.hash)
+  })
+
+  it('continues from a chain passed in', () => {
+    const original = new Blockchain()
+    original.addBlock([testEvent])
+
+    const restored = new Blockchain({ chain: original.chain })
+    restored.addBlock([{ ...testEvent, id: 'event-2' }])
+
+    expect(restored.chain.length).toBe(3)
+    expect(restored.isChainValid()).toBe(true)
+  })
+
+  it('calls onBlockAdded with the whole chain after each new block', () => {
+    const saves: number[] = []
+    const blockchain = new Blockchain({
+      onBlockAdded: (chain) => saves.push(chain.length),
+    })
+
+    blockchain.addBlock([testEvent])
+    blockchain.addBlock([testEvent])
+
+    expect(saves).toEqual([2, 3])
+  })
 })
 
 describe('Blockchain batching', () => {

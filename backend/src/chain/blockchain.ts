@@ -5,7 +5,11 @@ import { calculateMerkleRoot } from './merkle.js'
 export interface BlockchainOptions {
   batchSize?: number
   flushIntervalMs?: number
+  chain?: Block[]
+  onBlockAdded?: (chain: Block[]) => void
 }
+
+const GENESIS_TIMESTAMP = '2026-01-01T00:00:00.000Z'
 
 export class Blockchain {
   public chain: Block[]
@@ -13,6 +17,7 @@ export class Blockchain {
   private readonly batchSize: number
   private readonly flushIntervalMs: number | undefined
   private flushTimer: ReturnType<typeof setTimeout> | undefined
+  private readonly onBlockAdded: ((chain: Block[]) => void) | undefined
 
   constructor(options: BlockchainOptions = {}) {
     const batchSize = options.batchSize ?? 1
@@ -23,11 +28,13 @@ export class Blockchain {
 
     this.batchSize = batchSize
     this.flushIntervalMs = options.flushIntervalMs
-    this.chain = [this.createGenesisBlock()]
+    this.onBlockAdded = options.onBlockAdded
+    this.chain =
+      options.chain && options.chain.length > 0 ? options.chain : [this.createGenesisBlock()]
   }
 
   private createGenesisBlock(): Block {
-    return new Block(0, new Date().toISOString(), [], '0', 0)
+    return new Block(0, GENESIS_TIMESTAMP, [], '0', 0)
   }
 
   getLatestBlock(): Block {
@@ -52,6 +59,7 @@ export class Blockchain {
     )
 
     this.chain.push(newBlock)
+    this.onBlockAdded?.(this.chain)
 
     return newBlock
   }
