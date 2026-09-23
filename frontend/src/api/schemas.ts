@@ -31,16 +31,23 @@ export type PatientSummary = z.infer<typeof patientSummarySchema>
 export const noteVisibilitySchema = z.enum(['PRIVATE', 'STAFF', 'ALL'])
 export type NoteVisibility = z.infer<typeof noteVisibilitySchema>
 
-export const noteSchema = z.object({
+const noteFields = {
   id: z.number(),
   authorId: z.number(),
   authorName: z.string(),
   authorRole: roleSchema,
-  text: z.string(),
   visibility: noteVisibilitySchema,
   createdAt: z.iso.datetime(),
-})
+}
+
+// A note the server would not let this viewer read arrives without its text. The union
+// makes that unreadable-ness impossible to ignore: there is no text to render.
+export const noteSchema = z.discriminatedUnion('redacted', [
+  z.object({ ...noteFields, redacted: z.literal(false), text: z.string() }),
+  z.object({ ...noteFields, redacted: z.literal(true) }),
+])
 export type Note = z.infer<typeof noteSchema>
+export type ReadableNote = Extract<Note, { redacted: false }>
 
 export const patientDetailSchema = z.object({
   patient: patientSummarySchema,

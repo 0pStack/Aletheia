@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
+import { generateKeyPair } from '../chain/keypair.js'
 import { hashPassword } from './auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -34,7 +35,7 @@ beforeAll(() => {
   insertUser.run('patient_anna', passwordHash, 'Anna Andersson', 'PATIENT', annaPatientId)
   insertUser.run('unauth_user', passwordHash, 'Eve Stranded', 'UNAUTHORIZED', null)
 
-  app = createApp({ db })
+  app = createApp({ db, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {

@@ -84,7 +84,7 @@
 * **Hur fördelas uppgifter:** Tas ur backlogen under gemensamma möten.
 * **Nya uppgifter utanför mötestid:** Hämtas ur backlogen och kommuniceras omedelbart via Teams.
 * **Definition of Done (DoD / Klar):** En uppgift är klar först när gruppen är överens och koden är mergad.
-* **Kodgranskning:** Sker via branches i Git. Ändringar och feedback tas upp på möten med konstruktiv dialog.
+* **Kodgranskning:** Sker via branches i Git. **Ingenting committas direkt till `main`** — varje ändring går via en pull request med grön CI. `main` är skyddad i GitHub, så regeln gäller alla, även admin. Ändringar och feedback tas upp på möten med konstruktiv dialog.
 
 ---
 

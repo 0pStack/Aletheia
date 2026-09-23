@@ -8,8 +8,10 @@ Last checked against `main` on 2026-09-16 (commit `38f0b61`).
 1. Stay in the **current phase**. Don't start a later phase while the current one has open issues nobody is working on.
 2. Choose an issue that is **unassigned** and whose **Needs** issues are all merged.
 3. Assign yourself, move the card to **In progress**, and say so in Teams.
-4. Pull `main` first (`git pull`), then commit and push to `main`. Put `Closes #<nr>` in the commit message so GitHub closes the issue by itself.
-5. Take the next issue only after the last one is pushed.
+4. Branch from an up-to-date `main` as `feature/<issue-nummer>-<kort-beskrivning>`, push the branch, and open a PR. Put `Closes #<nr>` in the PR description so GitHub closes the issue when the PR merges.
+5. Take the next issue only after the last PR is merged.
+
+> **`main` takes no direct commits.** The branch is protected: a change reaches `main` through a pull request whose `backend` and `frontend` checks are green, and the rule applies to everyone, admins included. This paragraph used to say the opposite, and that is why a run of commits from September landed straight on `main`.
 
 Inside a phase, the issues are split into **lanes** (chain, backend, p2p, frontend). Lanes don't wait on each other unless an issue lists a Need, so four people can work at the same time, one per lane.
 
