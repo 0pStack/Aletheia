@@ -1,10 +1,28 @@
 import { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
+import { calculateMerkleRoot } from './merkle.js'
+
+export interface BlockchainOptions {
+  batchSize?: number
+  flushIntervalMs?: number
+}
 
 export class Blockchain {
   public chain: Block[]
+  public pending: AccessEvent[] = []
+  private readonly batchSize: number
+  private readonly flushIntervalMs: number | undefined
+  private flushTimer: ReturnType<typeof setTimeout> | undefined
 
-  constructor() {
+  constructor(options: BlockchainOptions = {}) {
+    const batchSize = options.batchSize ?? 1
+
+    if (!Number.isInteger(batchSize) || batchSize < 1) {
+      throw new Error('batchSize must be a positive integer')
+    }
+
+    this.batchSize = batchSize
+    this.flushIntervalMs = options.flushIntervalMs
     this.chain = [this.createGenesisBlock()]
   }
 
@@ -38,6 +56,46 @@ export class Blockchain {
     return newBlock
   }
 
+  addEvent(event: AccessEvent): void {
+    this.pending.push(event)
+
+    if (this.pending.length >= this.batchSize) {
+      this.flush()
+      return
+    }
+
+    this.startFlushTimer()
+  }
+
+  flush(): Block | undefined {
+    this.clearFlushTimer()
+
+    if (this.pending.length === 0) {
+      return undefined
+    }
+
+    const events = this.pending
+    this.pending = []
+
+    return this.addBlock(events)
+  }
+
+  private startFlushTimer(): void {
+    if (this.flushTimer || this.flushIntervalMs === undefined) {
+      return
+    }
+
+    this.flushTimer = setTimeout(() => this.flush(), this.flushIntervalMs)
+    this.flushTimer.unref()
+  }
+
+  private clearFlushTimer(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer)
+      this.flushTimer = undefined
+    }
+  }
+
   isChainValid(): boolean {
     const genesisBlock = this.chain[0]
 
@@ -53,6 +111,9 @@ export class Blockchain {
       }
 
       const recalculatedHash = currentBlock.calculateHash()
+      if (currentBlock.merkleRoot !== calculateMerkleRoot(currentBlock.data)) {
+        return false
+      }
 
       if (currentBlock.hash !== recalculatedHash) {
         return false

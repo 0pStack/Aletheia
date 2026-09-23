@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto'
 import type { AccessEvent } from './access-event.js'
+import { calculateMerkleRoot } from './merkle.js'
 
 export class Block {
   public index: number
   public timestamp: string
   public data: AccessEvent[]
+  public merkleRoot: string
   public previousHash: string
   public hash: string
   public nonce: number
@@ -21,14 +23,13 @@ export class Block {
     this.data = data
     this.previousHash = previousHash
     this.nonce = nonce
+    this.merkleRoot = calculateMerkleRoot(data)
     this.hash = this.calculateHash()
   }
 
   calculateHash(): string {
     return createHash('sha256')
-      .update(
-        `${this.index}${this.timestamp}${JSON.stringify(this.data)}${this.previousHash}${this.nonce}`,
-      )
+      .update(`${this.index}${this.timestamp}${this.merkleRoot}${this.previousHash}${this.nonce}`)
       .digest('hex')
   }
 }
