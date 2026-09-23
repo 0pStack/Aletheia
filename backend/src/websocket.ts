@@ -1,14 +1,44 @@
 import type { Server } from 'node:http'
-import { WebSocketServer } from 'ws'
+import { WebSocket, WebSocketServer } from 'ws'
 
 export const WEB_SOCKET_MESSAGE_TYPES = ['NEW_BLOCK', 'CHAIN_REQUEST', 'CHAIN_RESPONSE'] as const
 
 export type WebSocketMessageType = (typeof WEB_SOCKET_MESSAGE_TYPES)[number]
 
+const PEER_RECONNECT_DELAY_MS = 1000
+
 export function attachWebSocketServer(server: Server, peers: string[] = []): WebSocketServer {
+  const sockets = new Set<WebSocket>()
   const webSocketServer = new WebSocketServer({ server })
 
+  const connectToPeer = (peer: string): void => {
+    const socket = new WebSocket(peer)
+    sockets.add(socket)
+
+    socket.on('open', () => {
+      console.info(`Connected to peer: ${peer}`)
+    })
+
+    socket.on('close', () => {
+      sockets.delete(socket)
+      console.info(`Peer disconnected: ${peer}`)
+
+      setTimeout(() => {
+        connectToPeer(peer)
+      }, PEER_RECONNECT_DELAY_MS)
+    })
+
+    socket.on('error', () => {
+      console.info(`Peer connection error: ${peer}`)
+    })
+  }
+
+  for (const peer of peers) {
+    connectToPeer(peer)
+  }
+
   webSocketServer.on('connection', (socket) => {
+    sockets.add(socket)
     console.info('WebSocket client connected')
 
     socket.on('message', (data) => {
@@ -24,6 +54,7 @@ export function attachWebSocketServer(server: Server, peers: string[] = []): Web
     })
 
     socket.on('close', () => {
+      sockets.delete(socket)
       console.info('WebSocket client disconnected')
     })
   })

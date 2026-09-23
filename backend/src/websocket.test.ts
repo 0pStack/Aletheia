@@ -1,9 +1,71 @@
 import { createServer } from 'node:http'
-import { WebSocket } from 'ws'
+import { WebSocket, WebSocketServer } from 'ws'
 import { describe, expect, it, vi } from 'vitest'
 import { attachWebSocketServer } from './websocket.js'
 
 describe('attachWebSocketServer', () => {
+  it('connects to configured peers', async () => {
+    const server = createServer()
+    const peerServer = new WebSocketServer({ port: 0 })
+    const peerConnected = new Promise<void>((resolve) => {
+      peerServer.once('connection', () => resolve())
+    })
+
+    await new Promise<void>((resolve) => {
+      peerServer.once('listening', () => resolve())
+    })
+
+    const address = peerServer.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine peer server port')
+    }
+
+    const peerUrl = `ws://localhost:${address.port}`
+    const webSocketServer = attachWebSocketServer(server, [peerUrl])
+
+    await peerConnected
+
+    webSocketServer.close()
+    peerServer.close()
+    server.close()
+  })
+
+  it('reconnects to a peer after the connection closes', async () => {
+    const server = createServer()
+    const peerServer = new WebSocketServer({ port: 0 })
+
+    await new Promise<void>((resolve) => {
+      peerServer.once('listening', () => resolve())
+    })
+
+    const address = peerServer.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine peer server port')
+    }
+
+    const peerUrl = `ws://localhost:${address.port}`
+    const firstConnection = new Promise<WebSocket>((resolve) => {
+      peerServer.once('connection', (socket) => resolve(socket))
+    })
+
+    const webSocketServer = attachWebSocketServer(server, [peerUrl])
+
+    const firstSocket = await firstConnection
+    firstSocket.close()
+
+    const secondConnection = new Promise<void>((resolve) => {
+      peerServer.once('connection', () => resolve())
+    })
+
+    await secondConnection
+
+    webSocketServer.close()
+    peerServer.close()
+    server.close()
+  })
+
   it('attaches a WebSocket server to the HTTP server', () => {
     const server = createServer()
     const webSocketServer = attachWebSocketServer(server)
