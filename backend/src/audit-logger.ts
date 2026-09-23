@@ -2,6 +2,7 @@ import type { Request } from 'express'
 import { randomUUID } from 'node:crypto'
 import type { Blockchain } from './chain/blockchain.js'
 import type { AccessEvent } from './chain/access-event.js'
+import { resolveServerId } from './config/server-id.js'
 
 export function logAccessEvent(
   req: Request,
@@ -22,7 +23,7 @@ export function logAccessEvent(
     role: user.role,
     action,
     timestamp: new Date().toISOString(),
-    serverId: 'server-1',
+    serverId: resolveServerId(process.env),
   }
 
   blockchain.addEvent(event)
