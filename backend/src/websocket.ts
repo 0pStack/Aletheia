@@ -5,7 +5,7 @@ export const WEB_SOCKET_MESSAGE_TYPES = ['NEW_BLOCK', 'CHAIN_REQUEST', 'CHAIN_RE
 
 export type WebSocketMessageType = (typeof WEB_SOCKET_MESSAGE_TYPES)[number]
 
-export function attachWebSocketServer(server: Server): WebSocketServer {
+export function attachWebSocketServer(server: Server, peers: string[] = []): WebSocketServer {
   const webSocketServer = new WebSocketServer({ server })
 
   webSocketServer.on('connection', (socket) => {
