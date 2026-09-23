@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { createApp } from './app.js'
+import { generateKeyPair } from './chain/keypair.js'
 
 describe('GET /api/health', () => {
   it('responds with the success envelope and status ok', async () => {
-    const app = createApp()
+    const app = createApp({ keyPair: generateKeyPair() })
 
     const response = await request(app).get('/api/health')
 

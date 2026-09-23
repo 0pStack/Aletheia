@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
+import { generateKeyPair } from '../chain/keypair.js'
 import { hasOnlyAllowedBlockchainPayloadFields } from '../chain/payload-security.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -21,9 +22,13 @@ const NOTE_FIELDS = [
   'authorRole',
   'createdAt',
   'id',
+  'redacted',
   'text',
   'visibility',
 ]
+
+// A note the reader may not read carries no text field at all (issue #83).
+const REDACTED_NOTE_FIELDS = NOTE_FIELDS.filter((field) => field !== 'text')
 
 let db: DatabaseType
 let app: Express
@@ -62,7 +67,7 @@ beforeAll(() => {
   ).run(annaId, doctorId, 'Mild fever. Prescribed rest.', 'ALL')
 
   blockchain = new Blockchain()
-  app = createApp({ db, blockchain })
+  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {
@@ -148,6 +153,7 @@ describe('GET /api/patients/:id response shape', () => {
       text: 'Mild fever. Prescribed rest.',
       visibility: 'ALL',
       createdAt: expect.stringMatching(ISO_DATE),
+      redacted: false,
     })
   })
 
@@ -156,7 +162,7 @@ describe('GET /api/patients/:id response shape', () => {
     const res = await agent.get(`/api/patients/${annaId}`)
 
     for (const note of res.body.data.notes) {
-      expect(Object.keys(note).sort()).toEqual(NOTE_FIELDS)
+      expect(Object.keys(note).sort()).toEqual(note.redacted ? REDACTED_NOTE_FIELDS : NOTE_FIELDS)
     }
   })
 
