@@ -94,6 +94,26 @@
   align-self: flex-start;
 }
 
+/* A note this reader may not open. A hairline and a muted mark, not a filled warning:
+   nothing has gone wrong, the note is simply not theirs to read. */
+.restricted {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 65ch;
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-iridescent-oxblood);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.restrictedMark {
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-iridescent-oxblood);
+}
+
 .noteForm {
   display: flex;
   flex-direction: column;

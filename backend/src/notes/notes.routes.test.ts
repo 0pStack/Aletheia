@@ -116,7 +116,16 @@ describe('POST /api/patients/:id/notes', () => {
     expect(res.body.data.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/)
     // The database row's own keys must not leak through.
     expect(Object.keys(res.body.data).sort()).toEqual(
-      ['authorId', 'authorName', 'authorRole', 'createdAt', 'id', 'text', 'visibility'].sort(),
+      [
+        'authorId',
+        'authorName',
+        'authorRole',
+        'createdAt',
+        'id',
+        'redacted',
+        'text',
+        'visibility',
+      ].sort(),
     )
   })
 

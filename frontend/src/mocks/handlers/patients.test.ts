@@ -122,7 +122,7 @@ describe('GET /api/patients/:id', () => {
     expect(error).toMatchObject({ status: 403, code: 'FORBIDDEN' })
   })
 
-  it('gives staff STAFF and ALL notes, plus their own PRIVATE notes only', async () => {
+  it("gives staff STAFF and ALL notes, and a colleague's PRIVATE note only as a stub", async () => {
     await login('nurse_jackie', 'Password123!')
 
     const detail = await request('/api/patients/1', patientDetailSchema)
@@ -134,7 +134,10 @@ describe('GET /api/patients/:id', () => {
     })
     expect(detail.notes.some((note) => note.visibility === 'STAFF')).toBe(true)
     expect(detail.notes.some((note) => note.visibility === 'ALL')).toBe(true)
-    expect(detail.notes.some((note) => note.visibility === 'PRIVATE')).toBe(false)
+    // A colleague's PRIVATE note reaches her, but stripped of its text (issue #83).
+    const privateNotes = detail.notes.filter((note) => note.visibility === 'PRIVATE')
+    expect(privateNotes.length).toBeGreaterThan(0)
+    expect(privateNotes.every((note) => note.redacted)).toBe(true)
   })
 
   it("includes the caller's own PRIVATE notes for staff", async () => {
@@ -142,9 +145,11 @@ describe('GET /api/patients/:id', () => {
 
     const detail = await request('/api/patients/1', patientDetailSchema)
 
-    expect(detail.notes.some((note) => note.visibility === 'PRIVATE' && note.authorId === 1)).toBe(
-      true,
-    )
+    expect(
+      detail.notes.some(
+        (note) => note.visibility === 'PRIVATE' && note.authorId === 1 && !note.redacted,
+      ),
+    ).toBe(true)
   })
 
   it('returns only ALL-visibility notes for the matching PATIENT', async () => {
@@ -159,6 +164,9 @@ describe('GET /api/patients/:id', () => {
     })
     expect(detail.notes.length).toBeGreaterThan(0)
     expect(detail.notes.every((note) => note.visibility === 'ALL')).toBe(true)
+    // Staff get a stub for a note they may not read; a patient gets nothing at all,
+    // because whether they should is still an open group decision (issue #83).
+    expect(detail.notes.every((note) => !note.redacted)).toBe(true)
   })
 
   it('is 404 NOT_FOUND for an unknown patient id', async () => {
