@@ -33,6 +33,33 @@ describe('JournalPage', () => {
     expect(screen.getAllByText('Dr. Gregory House').length).toBeGreaterThan(0)
   })
 
+  it('shows staff the visibility of every note the server sent', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+
+    renderJournal('/patients/1')
+
+    expect(await screen.findByRole('heading', { name: 'Anna Andersson' })).toBeInTheDocument()
+    expect(screen.getByText(/private notes you wrote yourself/i)).toBeInTheDocument()
+    expect(screen.getByText('Staff only')).toBeInTheDocument()
+    expect(screen.getByText('Private')).toBeInTheDocument()
+  })
+
+  it('shows a patient only what the server shared, without visibility labels', async () => {
+    setCurrentSessionUserId(PATIENT_ANNA_ID)
+
+    renderJournal('/patients/1')
+
+    // The landing behind the panel greets Anna by name too, so wait on the note itself.
+    expect(await screen.findByText(/mild fever and sore throat/i)).toBeInTheDocument()
+    expect(screen.getByText(/your journal/i)).toBeInTheDocument()
+    expect(screen.getByText(/shared with you/i)).toBeInTheDocument()
+    // The server never sends these, so the browser has nothing to hide.
+    expect(screen.queryByText(/elevated heart rate/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/differential diagnosis/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Staff only')).not.toBeInTheDocument()
+    expect(screen.queryByText('Visible to patient')).not.toBeInTheDocument()
+  })
+
   it('says so when the patient has no notes', async () => {
     setCurrentSessionUserId(DOCTOR_ID)
     server.use(

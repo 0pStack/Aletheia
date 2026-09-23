@@ -1,6 +1,8 @@
 import { Link, Navigate, useParams } from 'react-router'
 import { ApiError } from '../../api/http'
 import { Button } from '../../shared/ui/Button/Button'
+import { useSession } from '../auth/useSession'
+import { getJournalAccess } from './journalAccess'
 import { NoteList } from './NoteList'
 import { usePatientDetail } from './usePatientDetail'
 import styles from './JournalPage.module.css'
@@ -26,6 +28,7 @@ function PatientNotFound() {
 
 export function JournalPage() {
   const patientId = parsePatientId(useParams().patientId)
+  const viewer = useSession().data
   const detail = usePatientDetail(patientId)
 
   if (patientId === null) return <PatientNotFound />
@@ -49,11 +52,12 @@ export function JournalPage() {
   }
 
   const { patient, notes } = detail.data
+  const access = getJournalAccess(viewer, patientId)
 
   return (
     <article className={styles.journal}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Journal</p>
+        <p className={styles.eyebrow}>{access.isOwnRecord ? 'Your journal' : 'Journal'}</p>
         <h1 id={JOURNAL_TITLE_ID}>{patient.name}</h1>
         <p className={styles.personalNumber}>{patient.personalNumber}</p>
       </header>
@@ -62,10 +66,17 @@ export function JournalPage() {
         <h2 id="notes-heading" className={styles.sectionHeading}>
           Notes
         </h2>
+        {/* Says what this list covers for this role. The server has already left out
+            everything else, so there is nothing hidden here to reveal. */}
+        <p className={styles.scope}>
+          {access.isStaff
+            ? 'Shared and staff notes, plus private notes you wrote yourself.'
+            : 'Notes your care team has shared with you.'}
+        </p>
         {notes.length === 0 ? (
           <p className={styles.empty}>No notes yet.</p>
         ) : (
-          <NoteList notes={notes} />
+          <NoteList notes={notes} showVisibility={access.canSeeVisibilityLabels} />
         )}
       </section>
     </article>

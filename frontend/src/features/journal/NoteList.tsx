@@ -12,9 +12,12 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeS
 
 interface NoteListProps {
   notes: readonly Note[]
+  // A patient only ever receives notes shared with them, so the label would say the
+  // same thing on every note and hint at a distinction they cannot act on.
+  showVisibility: boolean
 }
 
-export function NoteList({ notes }: NoteListProps) {
+export function NoteList({ notes, showVisibility }: NoteListProps) {
   return (
     <ol className={styles.notes}>
       {notes.map((note) => (
@@ -25,7 +28,9 @@ export function NoteList({ notes }: NoteListProps) {
             <time dateTime={note.createdAt}>{dateFormat.format(new Date(note.createdAt))}</time>
           </div>
           <p className={styles.noteText}>{note.text}</p>
-          <span className={styles.visibility}>{VISIBILITY_LABELS[note.visibility]}</span>
+          {showVisibility && (
+            <span className={styles.visibility}>{VISIBILITY_LABELS[note.visibility]}</span>
+          )}
         </li>
       ))}
     </ol>

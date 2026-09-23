@@ -44,6 +44,13 @@
   margin-bottom: var(--space-4);
 }
 
+.scope {
+  max-width: 65ch;
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .empty {
   color: var(--color-text-muted);
 }
