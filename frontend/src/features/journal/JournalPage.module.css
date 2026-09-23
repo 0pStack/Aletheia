@@ -93,3 +93,66 @@
 .visibility {
   align-self: flex-start;
 }
+
+.noteForm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.noteInput {
+  width: 100%;
+  max-width: 65ch;
+  padding: var(--space-3) 0;
+  font: inherit;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-input);
+  border-radius: var(--radius-sharp);
+  resize: vertical;
+  transition: border-color var(--duration-ui) var(--ease-glide);
+}
+
+.noteInput:hover {
+  border-bottom-color: var(--color-text);
+}
+
+/* Matches the login field: the rule under the field thickens instead of a ring around it.
+   box-shadow rather than a 2px border, so the text does not shift on focus. */
+.noteInput:focus-visible {
+  outline: 0;
+  border-bottom-color: var(--color-focus);
+  box-shadow: 0 1px 0 0 var(--color-focus);
+}
+
+.visibilityChoice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.visibilityOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.noteFormError,
+.noteFormStatus {
+  font-size: var(--text-sm);
+  min-height: 1lh;
+}
+
+.noteFormError {
+  color: var(--color-iridescent-oxblood);
+}
+
+.noteFormStatus {
+  color: var(--color-text-muted);
+}

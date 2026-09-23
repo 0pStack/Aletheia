@@ -3,6 +3,7 @@ import { ApiError } from '../../api/http'
 import { Button } from '../../shared/ui/Button/Button'
 import { useSession } from '../auth/useSession'
 import { getJournalAccess } from './journalAccess'
+import { NoteForm } from './NoteForm'
 import { NoteList } from './NoteList'
 import { usePatientDetail } from './usePatientDetail'
 import styles from './JournalPage.module.css'
@@ -79,6 +80,15 @@ export function JournalPage() {
           <NoteList notes={notes} showVisibility={access.canSeeVisibilityLabels} />
         )}
       </section>
+
+      {access.canWriteNotes && (
+        <section aria-labelledby="write-heading">
+          <h2 id="write-heading" className={styles.sectionHeading}>
+            Write a note
+          </h2>
+          <NoteForm patientId={patientId} />
+        </section>
+      )}
     </article>
   )
 }
