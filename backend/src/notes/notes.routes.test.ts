@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
+import { generateKeyPair } from '../chain/keypair.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
@@ -60,7 +61,7 @@ beforeAll(() => {
 
   blockchain = new Blockchain()
 
-  app = createApp({ db, blockchain })
+  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {
@@ -116,7 +117,16 @@ describe('POST /api/patients/:id/notes', () => {
     expect(res.body.data.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/)
     // The database row's own keys must not leak through.
     expect(Object.keys(res.body.data).sort()).toEqual(
-      ['authorId', 'authorName', 'authorRole', 'createdAt', 'id', 'text', 'visibility'].sort(),
+      [
+        'authorId',
+        'authorName',
+        'authorRole',
+        'createdAt',
+        'id',
+        'redacted',
+        'text',
+        'visibility',
+      ].sort(),
     )
   })
 
@@ -249,7 +259,17 @@ describe('GET /api/patients/:id', () => {
     })
 
     expect(Object.keys(readEvent ?? {}).sort()).toEqual(
-      ['action', 'id', 'patientId', 'role', 'serverId', 'timestamp', 'userId'].sort(),
+      [
+        'action',
+        'id',
+        'patientId',
+        'publicKey',
+        'role',
+        'serverId',
+        'signature',
+        'timestamp',
+        'userId',
+      ].sort(),
     )
   })
 

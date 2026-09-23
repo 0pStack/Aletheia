@@ -5,6 +5,7 @@ import { NoteList } from './NoteList'
 
 function note(id: number, visibility: NoteVisibility): Note {
   return {
+    redacted: false,
     id,
     authorId: 1,
     authorName: 'Dr. Gregory House',
@@ -16,6 +17,16 @@ function note(id: number, visibility: NoteVisibility): Note {
 }
 
 const everyVisibility: readonly Note[] = [note(1, 'ALL'), note(2, 'STAFF'), note(3, 'PRIVATE')]
+
+const restricted: Note = {
+  id: 9,
+  authorId: 1,
+  authorName: 'Dr. Gregory House',
+  authorRole: 'DOCTOR',
+  visibility: 'PRIVATE',
+  createdAt: '2026-01-10T09:00:00.000Z',
+  redacted: true,
+}
 
 describe('NoteList', () => {
   it('labels each note for a viewer allowed to see visibility', () => {
@@ -35,5 +46,15 @@ describe('NoteList', () => {
       expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
+  })
+
+  it('shows who wrote a restricted note without showing the note', () => {
+    render(<NoteList notes={[restricted]} showVisibility />)
+
+    expect(screen.getByText('Restricted')).toBeInTheDocument()
+    expect(screen.getByText(/only dr\. gregory house can read it/i)).toBeInTheDocument()
+    // The row is there, so the gap in the list is visible rather than silent.
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByText('Dr. Gregory House')).toBeInTheDocument()
   })
 })

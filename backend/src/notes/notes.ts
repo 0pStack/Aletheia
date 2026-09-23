@@ -24,21 +24,36 @@ interface NoteRow {
   created_at: string
 }
 
-export interface VisibleNoteRow extends NoteRow {
+// text is null on a row the viewer may not read: the query never selects it for them.
+export interface VisibleNoteRow extends Omit<NoteRow, 'text'> {
+  text: string | null
   author_name: string
   author_role: UserRole
+  redacted: 0 | 1
 }
 
 // The note as docs/interfaces.md defines it: camelCase, an author to show, an ISO timestamp.
-export interface NoteResponse {
+interface NoteBase {
   id: number
   authorId: number
   authorName: string
   authorRole: UserRole
-  text: string
   visibility: NoteVisibility
   createdAt: string
 }
+
+export interface ReadableNote extends NoteBase {
+  redacted: false
+  text: string
+}
+
+// A note the viewer may not read: who wrote it and when, and nothing else. There is no
+// text field to leave out by accident, because the type does not have one.
+export interface RedactedNote extends NoteBase {
+  redacted: true
+}
+
+export type NoteResponse = ReadableNote | RedactedNote
 
 // SQLite writes 'YYYY-MM-DD HH:MM:SS' in UTC; the API speaks ISO everywhere.
 function toIso(sqliteDate: string): string {
@@ -47,15 +62,17 @@ function toIso(sqliteDate: string): string {
 }
 
 export function toNoteResponse(row: VisibleNoteRow): NoteResponse {
-  return {
+  const base: NoteBase = {
     id: row.id,
     authorId: row.author_id,
     authorName: row.author_name,
     authorRole: row.author_role,
-    text: row.text,
     visibility: row.visibility,
     createdAt: toIso(row.created_at),
   }
+
+  if (row.redacted === 1 || row.text === null) return { ...base, redacted: true }
+  return { ...base, redacted: false, text: row.text }
 }
 
 export function patientExists(db: DatabaseType, patientId: number): boolean {
@@ -86,22 +103,38 @@ export function getVisibleNotes(
   const isStaff = viewer.role === 'DOCTOR' || viewer.role === 'NURSE' || viewer.role === 'CLINIC'
   const canSeeAll = isStaff || viewer.role === 'PATIENT'
 
+  // Staff also learn that a colleague's PRIVATE note exists, without its text: the CASE
+  // leaves the column null for them, so the words never leave the database (issue #83).
+  // A patient gets no such stub; that is still an open group decision.
+  const readable = `(
+    (n.visibility = 'PRIVATE' AND n.author_id = @viewerId)
+    OR (n.visibility = 'STAFF' AND @isStaff = 1)
+    OR (n.visibility = 'ALL' AND @canSeeAll = 1)
+  )`
+
+  const stub = `(@isStaff = 1 AND n.visibility = 'PRIVATE' AND n.author_id <> @viewerId)`
+
   return db
     .prepare(
-      `SELECT n.*,
+      `SELECT n.id,
+              n.patient_id,
+              n.author_id,
+              n.visibility,
+              n.created_at,
               u.name AS author_name,
-              u.role AS author_role
+              u.role AS author_role,
+              CASE WHEN ${readable} THEN n.text END AS text,
+              CASE WHEN ${readable} THEN 0 ELSE 1 END AS redacted
        FROM notes n
        JOIN users u ON u.id = n.author_id
-       WHERE n.patient_id = ?
-         AND (
-           (n.visibility = 'PRIVATE' AND n.author_id = ?)
-           OR
-           (n.visibility = 'STAFF' AND ? = 1)
-           OR
-           (n.visibility = 'ALL' AND ? = 1)
-         )
+       WHERE n.patient_id = @patientId
+         AND (${readable} OR ${stub})
        ORDER BY n.created_at, n.id`,
     )
-    .all(patientId, viewer.id, isStaff ? 1 : 0, canSeeAll ? 1 : 0) as VisibleNoteRow[]
+    .all({
+      patientId,
+      viewerId: viewer.id,
+      isStaff: isStaff ? 1 : 0,
+      canSeeAll: canSeeAll ? 1 : 0,
+    }) as VisibleNoteRow[]
 }
