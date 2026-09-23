@@ -2,11 +2,16 @@ import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router } from 'express'
 import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
+import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
 import { requireRole } from '../rbac.js'
 import { createNote, patientExists, toNoteResponse } from './notes.js'
 
-export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Router {
+export function createNotesRouter(
+  db: DatabaseType,
+  blockchain: Blockchain,
+  keyPair: KeyPair,
+): Router {
   const router = Router()
 
   router.post('/:id/notes', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
@@ -46,7 +51,7 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
       visibility,
     })
 
-    logAccessEvent(req, blockchain, patientId, 'WRITE')
+    logAccessEvent(req, blockchain, patientId, 'WRITE', keyPair)
 
     // The author is always allowed to read back what they just wrote.
     return ok(

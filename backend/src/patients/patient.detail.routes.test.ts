@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
+import { generateKeyPair } from '../chain/keypair.js'
 import { hasOnlyAllowedBlockchainPayloadFields } from '../chain/payload-security.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -66,7 +67,7 @@ beforeAll(() => {
   ).run(annaId, doctorId, 'Mild fever. Prescribed rest.', 'ALL')
 
   blockchain = new Blockchain()
-  app = createApp({ db, blockchain })
+  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {

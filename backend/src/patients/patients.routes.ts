@@ -2,6 +2,7 @@ import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router } from 'express'
 import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
+import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
 import { getVisibleNotes, toNoteResponse } from '../notes/notes.js'
 import { requireRole } from '../rbac.js'
@@ -22,7 +23,11 @@ function digitsOnly(value: string): string {
   return value.replace(/\D/g, '')
 }
 
-export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): Router {
+export function createPatientsRouter(
+  db: DatabaseType,
+  blockchain: Blockchain,
+  keyPair: KeyPair,
+): Router {
   const router = Router()
 
   router.get('/', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
@@ -72,7 +77,7 @@ export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): 
     }
 
     if (user.role === 'PATIENT' && user.patientId !== patientId) {
-      logAccessEvent(req, blockchain, patientId, 'DENIED')
+      logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
 
       return fail(res, 403, 'FORBIDDEN', 'You do not have permission to access this patient.')
     }
@@ -97,7 +102,7 @@ export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): 
       role: user.role,
     }).map(toNoteResponse)
 
-    logAccessEvent(req, blockchain, patientId, 'READ')
+    logAccessEvent(req, blockchain, patientId, 'READ', keyPair)
 
     return ok(res, {
       patient,
