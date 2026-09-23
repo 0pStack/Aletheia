@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from 'express'
+import Database, { type Database as DatabaseType } from 'better-sqlite3'
 import { logAccessEvent } from './audit-logger.js'
 import { Blockchain } from './chain/blockchain.js'
+import { patientExists } from './notes/notes.js'
 import type { UserRole } from './auth/auth.js'
 
 // The chain is put on app.locals by createApp. Read it defensively: a refusal must stay
@@ -10,11 +12,23 @@ function chainFor(req: Request): Blockchain | undefined {
   return candidate instanceof Blockchain ? candidate : undefined
 }
 
-// Only a route that names a patient can be refused *about* a patient. A refused search
-// targets nobody yet, so there is no record to attach it to.
-function patientIdFor(req: Request): number | undefined {
+function dbFor(req: Request): DatabaseType | undefined {
+  const candidate: unknown = req.app?.locals?.db
+  return candidate instanceof Database ? candidate : undefined
+}
+
+// Only a route that names a real patient can be refused *about* a patient. A refused
+// search targets nobody yet, and an id that belongs to no one is not an incident in
+// anybody's history — writing it anyway would let a refused account push chosen noise
+// into a chosen patient's record, permanently, since the chain cannot be corrected.
+function refusedPatientId(req: Request): number | undefined {
   const parsed = Number(req.params?.id)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+  if (!Number.isInteger(parsed) || parsed <= 0) return undefined
+
+  const db = dbFor(req)
+  if (!db || !patientExists(db, parsed)) return undefined
+
+  return parsed
 }
 
 export function requireRole(...allowedRoles: UserRole[]) {
@@ -36,7 +50,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
       // The reaches that matter most are the ones that were refused. Without this, a
       // curious employee is the only visitor who leaves no trace.
       const blockchain = chainFor(req)
-      const patientId = patientIdFor(req)
+      const patientId = refusedPatientId(req)
       if (blockchain && patientId !== undefined) {
         logAccessEvent(req, blockchain, patientId, 'DENIED')
       }

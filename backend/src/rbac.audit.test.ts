@@ -69,6 +69,18 @@ describe('a refused attempt on a patient', () => {
     })
   })
 
+  it('records nothing against a patient id that belongs to no one', async () => {
+    const stranger = await loginAs('unauth_user')
+    const lengthBefore = blockchain.chain.length
+
+    const res = await stranger.get('/api/patients/999999')
+
+    expect(res.status).toBe(403)
+    // Otherwise a refused account could write chosen entries into any record it named,
+    // and the chain keeps them for good.
+    expect(blockchain.chain.length).toBe(lengthBefore)
+  })
+
   it('records nothing when nobody is signed in', async () => {
     const lengthBefore = blockchain.chain.length
 
