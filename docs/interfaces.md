@@ -86,7 +86,7 @@ Medical data stays in SQL. The blockchain stores the audit information needed to
 
 When creating medical notes (`POST /api/patients/:id/notes`), the author chooses one of the following:
 
-* `PRIVATE` — Only visible to the author who created the note.
+* `PRIVATE` — Only the author can read the text. Other healthcare staff see that the note exists, who wrote it and when, but never its contents; a patient sees nothing at all. See *Redacted notes* under endpoint 5.
 * `STAFF` — Visible to all healthcare staff (`DOCTOR`, `NURSE`, `CLINIC`).
 * `ALL` — Visible to healthcare staff and the patient themselves.
 

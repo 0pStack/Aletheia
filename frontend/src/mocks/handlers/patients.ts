@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import type { Note } from '../../api/schemas'
 import { mockPatients, STAFF_ROLES, type MockNote, type MockUser } from '../data'
 import { addMockNote, allMockNotes } from '../noteStore'
 import { badRequest, notFound, requirePatientViewAccess, requireStaffAccess } from './authGuard'
@@ -13,10 +14,10 @@ function canRead(note: MockNote, viewer: MockUser): boolean {
   return note.authorId === viewer.id
 }
 
-function visibleNotes(patientId: number, viewer: MockUser): readonly unknown[] {
+function visibleNotes(patientId: number, viewer: MockUser): readonly Note[] {
   return allMockNotes()
     .filter((note) => note.patientId === patientId)
-    .flatMap((note) => {
+    .flatMap((note): Note[] => {
       const base = {
         id: note.id,
         authorId: note.authorId,
