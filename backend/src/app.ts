@@ -37,10 +37,11 @@ export function createApp(options: CreateAppOptions): Express {
   const db = options.db ?? defaultDb
   const blockchain = options.blockchain ?? new Blockchain()
   const app = express()
-  // requireRole records refused attempts, and reaches the chain and the patients
-  // through here, without every route having to pass them in.
+  // requireRole records refused attempts, and reaches the chain, the patients and the
+  // signing key through here, without every route having to pass them in.
   app.locals.blockchain = blockchain
   app.locals.db = db
+  app.locals.keyPair = options.keyPair
 
   app.use(express.json())
 

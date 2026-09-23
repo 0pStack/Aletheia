@@ -7,7 +7,9 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
 import { hashPassword } from './auth/auth.js'
+import { verifyAccessEvent } from './chain/access-event-signing.js'
 import { Blockchain } from './chain/blockchain.js'
+import { generateKeyPair } from './chain/keypair.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../db/schema.sql')
@@ -46,7 +48,7 @@ beforeAll(() => {
   }
 
   blockchain = new Blockchain()
-  app = createApp({ db, blockchain })
+  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {
@@ -67,6 +69,15 @@ describe('a refused attempt on a patient', () => {
       role: 'UNAUTHORIZED',
       action: 'DENIED',
     })
+  })
+
+  it('is signed, like every other access event', async () => {
+    const stranger = await loginAs('unauth_user')
+
+    await stranger.get(`/api/patients/${patientId}`)
+
+    const event = blockchain.getLatestBlock().data[0]
+    expect(event && verifyAccessEvent(event)).toBe(true)
   })
 
   it('records nothing against a patient id that belongs to no one', async () => {

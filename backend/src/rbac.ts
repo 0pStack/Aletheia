@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express'
 import Database, { type Database as DatabaseType } from 'better-sqlite3'
 import { logAccessEvent } from './audit-logger.js'
 import { Blockchain } from './chain/blockchain.js'
+import type { KeyPair } from './chain/keypair.js'
 import { patientExists } from './notes/notes.js'
 import type { UserRole } from './auth/auth.js'
 
@@ -15,6 +16,15 @@ function chainFor(req: Request): Blockchain | undefined {
 function dbFor(req: Request): DatabaseType | undefined {
   const candidate: unknown = req.app?.locals?.db
   return candidate instanceof Database ? candidate : undefined
+}
+
+function keyPairFor(req: Request): KeyPair | undefined {
+  const candidate: unknown = req.app?.locals?.keyPair
+  if (typeof candidate !== 'object' || candidate === null) return undefined
+  const { publicKey, privateKey } = candidate as Record<string, unknown>
+  return typeof publicKey === 'string' && typeof privateKey === 'string'
+    ? { publicKey, privateKey }
+    : undefined
 }
 
 // Only a route that names a real patient can be refused *about* a patient. A refused
@@ -50,9 +60,10 @@ export function requireRole(...allowedRoles: UserRole[]) {
       // The reaches that matter most are the ones that were refused. Without this, a
       // curious employee is the only visitor who leaves no trace.
       const blockchain = chainFor(req)
+      const keyPair = keyPairFor(req)
       const patientId = refusedPatientId(req)
-      if (blockchain && patientId !== undefined) {
-        logAccessEvent(req, blockchain, patientId, 'DENIED')
+      if (blockchain && keyPair && patientId !== undefined) {
+        logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
       }
 
       return res.status(403).json({
