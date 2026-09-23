@@ -53,8 +53,16 @@ export function createNotesRouter(
 
     logAccessEvent(req, blockchain, patientId, 'WRITE', keyPair)
 
-    // The author is whoever is signed in, so the row does not need joining back to users.
-    return ok(res, toNoteResponse({ ...note, author_name: user.name, author_role: user.role }))
+    // The author is always allowed to read back what they just wrote.
+    return ok(
+      res,
+      toNoteResponse({
+        ...note,
+        author_name: user.name,
+        author_role: user.role,
+        redacted: 0,
+      }),
+    )
   })
 
   return router

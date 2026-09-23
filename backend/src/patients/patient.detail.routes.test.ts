@@ -22,9 +22,13 @@ const NOTE_FIELDS = [
   'authorRole',
   'createdAt',
   'id',
+  'redacted',
   'text',
   'visibility',
 ]
+
+// A note the reader may not read carries no text field at all (issue #83).
+const REDACTED_NOTE_FIELDS = NOTE_FIELDS.filter((field) => field !== 'text')
 
 let db: DatabaseType
 let app: Express
@@ -149,6 +153,7 @@ describe('GET /api/patients/:id response shape', () => {
       text: 'Mild fever. Prescribed rest.',
       visibility: 'ALL',
       createdAt: expect.stringMatching(ISO_DATE),
+      redacted: false,
     })
   })
 
@@ -157,7 +162,7 @@ describe('GET /api/patients/:id response shape', () => {
     const res = await agent.get(`/api/patients/${annaId}`)
 
     for (const note of res.body.data.notes) {
-      expect(Object.keys(note).sort()).toEqual(NOTE_FIELDS)
+      expect(Object.keys(note).sort()).toEqual(note.redacted ? REDACTED_NOTE_FIELDS : NOTE_FIELDS)
     }
   })
 
