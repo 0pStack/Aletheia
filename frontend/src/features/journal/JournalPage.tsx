@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams } from 'react-router'
 import { ApiError } from '../../api/http'
+import { AccessLog } from '../access-log/AccessLog'
 import { Button } from '../../shared/ui/Button/Button'
 import { useSession } from '../auth/useSession'
 import { getJournalAccess } from './journalAccess'
@@ -79,6 +80,13 @@ export function JournalPage() {
         ) : (
           <NoteList notes={notes} showVisibility={access.canSeeVisibilityLabels} />
         )}
+      </section>
+
+      <section aria-labelledby="access-log-heading">
+        <h2 id="access-log-heading" className={styles.sectionHeading}>
+          Who has opened this record
+        </h2>
+        <AccessLog patientId={patientId} />
       </section>
 
       {access.canWriteNotes && (
