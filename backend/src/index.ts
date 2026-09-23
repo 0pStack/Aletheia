@@ -14,7 +14,7 @@ console.info(`Node public key loaded: ${keyPair.publicKey}`)
 console.info(`Configured peers: ${peers.length}`)
 
 const blockchain = new Blockchain({ batchSize: 5, flushIntervalMs: 2000 })
-const app = createApp({ blockchain })
+const app = createApp({ blockchain, keyPair })
 const server = createServer(app)
 attachWebSocketServer(server, peers)
 

@@ -2,12 +2,15 @@ import type { Request } from 'express'
 import { randomUUID } from 'node:crypto'
 import type { Blockchain } from './chain/blockchain.js'
 import type { AccessEvent } from './chain/access-event.js'
+import { signAccessEvent } from './chain/access-event-signing.js'
+import type { KeyPair } from './chain/keypair.js'
 
 export function logAccessEvent(
   req: Request,
   blockchain: Blockchain,
   patientId: number,
   action: AccessEvent['action'],
+  keyPair: KeyPair,
 ): void {
   const user = req.session.user
 
@@ -25,5 +28,5 @@ export function logAccessEvent(
     serverId: 'server-1',
   }
 
-  blockchain.addEvent(event)
+  blockchain.addEvent(signAccessEvent(event, keyPair.privateKey, keyPair.publicKey))
 }
