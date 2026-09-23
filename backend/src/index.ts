@@ -14,7 +14,7 @@ console.info(`Configured peers: ${peers.length}`)
 
 const app = createApp()
 const server = createServer(app)
-attachWebSocketServer(server)
+attachWebSocketServer(server, peers)
 
 server.listen(port, () => {
   console.info(`Backend listening on http://localhost:${port}`)
