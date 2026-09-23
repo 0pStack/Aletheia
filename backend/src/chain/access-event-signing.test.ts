@@ -81,8 +81,13 @@ describe('signAccessEvent', () => {
 
 describe('verifyAccessEvent', () => {
   const event: AccessEvent = {
-    id: 'event-verify', patientId: 1, userId: 10, role: 'DOCTOR', action: 'READ',
-    timestamp: '2026-09-23T12:00:00.000Z', serverId: 'server-1',
+    id: 'event-verify',
+    patientId: 1,
+    userId: 10,
+    role: 'DOCTOR',
+    action: 'READ',
+    timestamp: '2026-09-23T12:00:00.000Z',
+    serverId: 'server-1',
   }
 
   it('verifies a signature over the unsigned access event fields', () => {
