@@ -4,7 +4,7 @@ import { AccessLog } from '../access-log/AccessLog'
 import { Button } from '../../shared/ui/Button/Button'
 import { useSession } from '../auth/useSession'
 import { getJournalAccess } from './journalAccess'
-import { NoteForm } from './NoteForm'
+import { NoteComposer } from './NoteForm'
 import { NoteList } from './NoteList'
 import { usePatientDetail } from './usePatientDetail'
 import styles from './JournalPage.module.css'
@@ -64,39 +64,35 @@ export function JournalPage() {
         <p className={styles.personalNumber}>{patient.personalNumber}</p>
       </header>
 
-      <section aria-labelledby="notes-heading">
-        <h2 id="notes-heading" className={styles.sectionHeading}>
-          Notes
-        </h2>
-        {/* Says what this list covers for this role. The server has already left out
-            everything else, so there is nothing hidden here to reveal. */}
-        <p className={styles.scope}>
-          {access.isStaff
-            ? 'Shared and staff notes, plus private notes you wrote yourself.'
-            : 'Notes your care team has shared with you.'}
-        </p>
-        {notes.length === 0 ? (
-          <p className={styles.empty}>No notes yet.</p>
-        ) : (
-          <NoteList notes={notes} showVisibility={access.canSeeVisibilityLabels} />
-        )}
-      </section>
-
-      <section aria-labelledby="access-log-heading">
-        <h2 id="access-log-heading" className={styles.sectionHeading}>
-          Who has opened this record
-        </h2>
-        <AccessLog patientId={patientId} />
-      </section>
-
-      {access.canWriteNotes && (
-        <section aria-labelledby="write-heading">
-          <h2 id="write-heading" className={styles.sectionHeading}>
-            Write a note
+      {/* Notes are what the journal is read for; the access log sits beside them as the
+          proof, and drops below on narrow screens. */}
+      <div className={styles.body}>
+        <section aria-labelledby="notes-heading" className={styles.main}>
+          <h2 id="notes-heading" className={styles.sectionHeading}>
+            Notes
           </h2>
-          <NoteForm patientId={patientId} />
+          {/* Says what this list covers for this role. The server has already left out
+              everything else, so there is nothing hidden here to reveal. */}
+          <p className={styles.scope}>
+            {access.isStaff
+              ? 'Shared and staff notes, plus private notes you wrote yourself.'
+              : 'Notes your care team has shared with you.'}
+          </p>
+          {access.canWriteNotes && <NoteComposer patientId={patientId} />}
+          {notes.length === 0 ? (
+            <p className={styles.empty}>No notes yet.</p>
+          ) : (
+            <NoteList notes={notes} showVisibility={access.canSeeVisibilityLabels} />
+          )}
         </section>
-      )}
+
+        <aside aria-labelledby="access-log-heading" className={styles.rail}>
+          <h2 id="access-log-heading" className={styles.sectionHeading}>
+            Who has opened this record
+          </h2>
+          <AccessLog patientId={patientId} />
+        </aside>
+      </div>
     </article>
   )
 }

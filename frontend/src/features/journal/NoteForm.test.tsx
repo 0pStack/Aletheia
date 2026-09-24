@@ -22,12 +22,59 @@ function renderJournal(path: string) {
   )
 }
 
+async function openNoteForm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: /write a note/i }))
+}
+
 describe('NoteForm', () => {
+  it('stays closed until the author asks to write, then takes the cursor', async () => {
+    const user = userEvent.setup()
+    setCurrentSessionUserId(DOCTOR_ID)
+
+    renderJournal('/patients/1')
+
+    const trigger = await screen.findByRole('button', { name: /write a note/i })
+    expect(screen.queryByRole('textbox', { name: /new note/i })).not.toBeInTheDocument()
+
+    await user.click(trigger)
+
+    expect(screen.getByRole('textbox', { name: /new note/i })).toHaveFocus()
+  })
+
+  it('keeps an unsaved draft through Cancel, and says so', async () => {
+    const user = userEvent.setup()
+    setCurrentSessionUserId(DOCTOR_ID)
+
+    renderJournal('/patients/1')
+    await openNoteForm(user)
+    await user.type(screen.getByRole('textbox', { name: /new note/i }), 'Half a thought')
+    await user.click(screen.getByRole('radio', { name: /only you/i }))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    await user.click(screen.getByRole('button', { name: /continue your note/i }))
+
+    expect(screen.getByRole('textbox', { name: /new note/i })).toHaveValue('Half a thought')
+    expect(screen.getByRole('radio', { name: /only you/i })).toBeChecked()
+  })
+
+  it('closes on Cancel and puts the cursor back on the line that opened it', async () => {
+    const user = userEvent.setup()
+    setCurrentSessionUserId(DOCTOR_ID)
+
+    renderJournal('/patients/1')
+    await openNoteForm(user)
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(screen.queryByRole('textbox', { name: /new note/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /write a note/i })).toHaveFocus()
+  })
+
   it('saves a note and shows it in the journal', async () => {
     const user = userEvent.setup()
     setCurrentSessionUserId(DOCTOR_ID)
 
     renderJournal('/patients/1')
+    await openNoteForm(user)
 
     await user.type(
       await screen.findByRole('textbox', { name: /new note/i }),
@@ -54,6 +101,7 @@ describe('NoteForm', () => {
     )
 
     renderJournal('/patients/1')
+    await openNoteForm(user)
 
     await user.type(await screen.findByRole('textbox', { name: /new note/i }), 'Private thought.')
     await user.click(screen.getByRole('radio', { name: /only you/i }))
@@ -76,6 +124,7 @@ describe('NoteForm', () => {
     )
 
     renderJournal('/patients/1')
+    await openNoteForm(user)
 
     await user.click(await screen.findByRole('button', { name: /save note/i }))
 
@@ -89,6 +138,7 @@ describe('NoteForm', () => {
     setCurrentSessionUserId(DOCTOR_ID)
 
     renderJournal('/patients/1')
+    await openNoteForm(user)
 
     await user.type(await screen.findByRole('textbox', { name: /new note/i }), '   ')
     await user.click(screen.getByRole('button', { name: /save note/i }))
@@ -101,6 +151,7 @@ describe('NoteForm', () => {
     setCurrentSessionUserId(DOCTOR_ID)
 
     renderJournal('/patients/1')
+    await openNoteForm(user)
 
     await user.click(await screen.findByRole('button', { name: /save note/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/write something/i)
@@ -123,6 +174,7 @@ describe('NoteForm', () => {
     )
 
     renderJournal('/patients/1')
+    await openNoteForm(user)
 
     await user.type(await screen.findByRole('textbox', { name: /new note/i }), 'Keep me.')
     await user.click(screen.getByRole('button', { name: /save note/i }))
@@ -139,5 +191,6 @@ describe('NoteForm', () => {
     expect(await screen.findByText(/mild fever and sore throat/i)).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: /new note/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /save note/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /write a note/i })).not.toBeInTheDocument()
   })
 })

@@ -1,11 +1,17 @@
-/* Smoked glass over the landing scene, like the sheet under the hero, so the same five tokens
-   flip to light here. */
+/* Smoked glass over the landing scene, like the sheet under the hero, so the same tokens flip
+   to light here, on the same Bone opacity ladder (DESIGN.md). */
 .panel {
   --color-text: var(--color-paper);
   --color-text-muted: color-mix(in oklch, var(--color-paper) 78%, transparent);
+  --color-placeholder: color-mix(in oklch, var(--color-paper) 45%, transparent);
   --color-border: var(--color-paper);
   --color-focus: var(--color-paper);
   --color-divider: color-mix(in oklch, var(--color-paper) 20%, transparent);
+  --field-line: color-mix(in oklch, var(--color-paper) 32%, transparent);
+  --glass: color-mix(in oklch, var(--color-obsidian) 86%, transparent);
+  --glass-edge: color-mix(in oklch, var(--color-obsidian) 58%, transparent);
+  /* Native controls (radios, the textarea grip, the scrollbar) draw their dark variants. */
+  color-scheme: dark;
 
   /* The whole viewport, header included: the header scrolls with the landing, so leaving a strip
      for it would show whatever part of the landing was scrolled under it instead. */
@@ -17,7 +23,15 @@
   /* Unlike the page, a long journal keeps a thin bar, so its length is visible. */
   scrollbar-width: thin;
   color: var(--color-text);
-  background: color-mix(in oklch, var(--color-obsidian) 82%, transparent);
+  /* Full glass behind the text; thinner toward the sides, so the desert glows at the edges and
+     the journal reads as floating over the scene rather than as a black page. */
+  background: linear-gradient(
+    90deg,
+    var(--glass-edge),
+    var(--glass) 14%,
+    var(--glass) 86%,
+    var(--glass-edge)
+  );
   backdrop-filter: blur(32px) saturate(1.2);
 }
 
@@ -27,13 +41,13 @@
 
 @supports not (backdrop-filter: blur(1px)) {
   .panel {
-    background: color-mix(in oklch, var(--color-obsidian) 94%, transparent);
+    background: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
   }
 }
 
 .sheet {
   position: relative;
-  max-width: 48rem;
+  max-width: 76rem;
   margin-inline: auto;
   padding: clamp(var(--space-12), 10vh, 6rem) clamp(var(--space-6), 6vw, 6rem);
 }
@@ -51,15 +65,21 @@
   border-radius: var(--radius-pill);
   background: none;
   color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-lg);
-  line-height: 1;
   cursor: pointer;
-  transition: border-color var(--duration-ui) var(--ease-glide);
+  transition:
+    border-color var(--duration-ui) var(--ease-glide),
+    background-color var(--duration-ui) var(--ease-glide),
+    transform calc(var(--duration-ui) * 0.6) var(--ease-glide);
 }
 
 .close:hover {
   border-color: var(--color-text);
+  background: color-mix(in oklch, var(--color-paper) 5%, transparent);
+}
+
+/* The same press as the pill buttons. */
+.close:active {
+  transform: scale(0.96);
 }
 
 @media (prefers-reduced-motion: no-preference) {
