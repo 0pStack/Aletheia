@@ -40,33 +40,17 @@
   outline-offset: var(--space-2);
 }
 
-/* A reticle rather than a box: four corner ticks, like the landing's floating labels. */
+/* No frame: the block floats in a faint pool of light. The block's own glow marks hover. */
 .slot {
-  --tick: color-mix(in oklch, var(--color-paper) 28%, transparent);
-
   display: grid;
   place-items: center;
   aspect-ratio: 1;
   margin-bottom: var(--space-2);
-  background:
-    linear-gradient(var(--tick), var(--tick)) top left / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top left / 1px 0.75rem no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top right / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top right / 1px 0.75rem no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom left / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom left / 1px 0.75rem no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom right / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom right / 1px 0.75rem no-repeat,
-    radial-gradient(
-      circle at 50% 45%,
-      color-mix(in oklch, var(--color-paper) 7%, transparent),
-      transparent 68%
-    );
-}
-
-.tile:hover .slot,
-.tile:focus-visible .slot {
-  --tick: color-mix(in oklch, var(--color-paper) 70%, transparent);
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in oklch, var(--color-paper) 7%, transparent),
+    transparent 68%
+  );
 }
 
 /* Stands in for the block until it loads, and for good without WebGL. */

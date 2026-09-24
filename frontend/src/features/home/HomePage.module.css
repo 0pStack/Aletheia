@@ -133,13 +133,15 @@
   --color-divider: color-mix(in oklch, var(--color-paper) 20%, transparent);
   --field-line: color-mix(in oklch, var(--color-paper) 32%, transparent);
   --glass-fade: 7rem;
+  /* Named so a full-bleed section inside can cancel it exactly. */
+  --glass-inline: clamp(var(--space-6), 6vw, 6rem);
 
   position: relative;
   isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: clamp(var(--space-12), 12vh, 8rem);
-  padding: clamp(var(--space-12), 12vh, 8rem) clamp(var(--space-6), 6vw, 6rem);
+  padding: clamp(var(--space-12), 12vh, 8rem) var(--glass-inline);
   padding-top: calc(var(--glass-fade) + var(--space-6));
   color: var(--color-text);
 }

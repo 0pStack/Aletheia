@@ -87,6 +87,17 @@ interface Block {
   ice: Mesh<BufferGeometry, MeshPhysicalMaterial>
   lift: number
   phase: number
+  tilt: { x: number; y: number; z: number }
+}
+
+// Hand-cut ice never lies the same way twice. Seeded by the block's place in the list, so a block
+// keeps its own lie across re-renders instead of jumping to a new one.
+function tiltFor(index: number) {
+  const noise = (seed: number) => {
+    const s = Math.sin(index * 12.9898 + seed * 78.233) * 43758.5453
+    return (s - Math.floor(s)) * 2 - 1
+  }
+  return { x: noise(1) * 0.14, y: noise(2) * 0.55, z: noise(3) * 0.16 }
 }
 
 export function createInventoryScene(
@@ -151,7 +162,7 @@ export function createInventoryScene(
       block.scale.setScalar(slot.size * BLOCK_FILL)
       group.add(block)
       scene.add(group)
-      return { group, ice: block, lift: 0, phase: index * 1.7 }
+      return { group, ice: block, lift: 0, phase: index * 1.7, tilt: tiltFor(index) }
     })
     const thickness = (slots[0]?.size ?? 100) * 0.6
     ice.thickness = thickness
@@ -169,7 +180,12 @@ export function createInventoryScene(
       block.group.position.y = -slot.y + slot.size * (HOVER_LIFT * block.lift + bob)
       // A three-quarter view, so the block reads as a solid rather than a flat tile.
       const drift = moving ? time * 0.05 : 0
-      block.ice.rotation.set(0.42, -0.62 + block.lift * 0.55 + drift, 0.08)
+      const { tilt } = block
+      block.ice.rotation.set(
+        0.42 + tilt.x,
+        -0.62 + tilt.y + block.lift * 0.55 + drift,
+        0.08 + tilt.z,
+      )
       block.ice.material = active ? iceLit : ice
     })
     renderer.render(scene, camera)

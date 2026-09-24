@@ -3,15 +3,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  width: 100%;
-  max-width: var(--layout-max-width);
+  /* Edge to edge like the patients band: the glass sheet's side padding is cancelled here and
+     put back inside, so the content keeps the page's left edge while the canvas can reach the
+     screen's. */
+  margin-inline: calc(var(--glass-inline, 0px) * -1);
+  padding-inline: var(--glass-inline, 0px);
+  /* Breathing room above the heading when the nav link scrolls here. */
+  scroll-margin-top: var(--space-6);
 }
 
+/* The same headline as Patients above, so the page's two sections read as a pair. */
 .heading {
-  font-size: var(--text-2xl);
+  font-size: calc(var(--text-2xl) * 1.5);
   font-weight: var(--weight-light);
   line-height: var(--leading-heading);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .stage {
@@ -19,10 +25,12 @@
 }
 
 /* Over the members so the meerkats stand in their slots, never in the way of the links. It bleeds
-   past the row, so a meerkat scattered by the pointer drifts out instead of being cut off. */
+   past the row to the screen's edges, so a meerkat scattered by the pointer drifts out instead
+   of being cut off by an invisible box. */
 .canvas {
-  /* Sideways it bleeds no further than the glass's narrowest padding, or a phone scrolls sideways. */
-  --bleed-x: var(--space-6);
+  /* Exactly the glass's side padding: to the screen's edge and not a pixel further, or a phone
+     scrolls sideways. */
+  --bleed-x: var(--glass-inline, var(--space-6));
   --bleed-y: var(--space-8);
 
   position: absolute;
@@ -65,31 +73,22 @@
   text-align: center;
 }
 
-/* A reticle rather than a box, like the patient tiles: the meerkat forms inside the ticks. The
-   slot keeps its height before the scene arrives, so nothing shifts when it does. */
+/* Unframed space where the meerkat forms. It keeps its height before the scene arrives, so
+   nothing shifts when it does. */
 .slot {
-  --tick: color-mix(in oklch, var(--color-paper) 22%, transparent);
-
   display: block;
   width: 100%;
+  /* The meerkat scales with its slot, so the slot keeps the size a quarter of the layout width
+     gives it: a wider row spreads the meerkats apart instead of growing them. */
+  max-width: calc((var(--layout-max-width) - var(--space-6) * 3) / 4);
   aspect-ratio: 3 / 4;
   margin-bottom: var(--space-4);
-  background:
-    linear-gradient(var(--tick), var(--tick)) top left / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top left / 1px 0.75rem no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top right / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top right / 1px 0.75rem no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom left / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom left / 1px 0.75rem no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom right / 0.75rem 1px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom right / 1px 0.75rem no-repeat;
 }
 
-/* Without the scene the empty reticles would only be holes: the names close up instead. */
+/* Without the scene the empty slots would only be holes: the names close up instead. */
 .stage[data-scene='fallback'] .slot {
   aspect-ratio: auto;
   height: var(--space-4);
-  background: none;
 }
 
 .name {

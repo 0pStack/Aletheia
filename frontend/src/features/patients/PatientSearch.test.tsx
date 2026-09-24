@@ -102,6 +102,48 @@ describe('patient search on the landing page', () => {
     )
   })
 
+  it('puts the cursor in the search when the page is reached at /#patients', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    renderLanding('/#patients')
+
+    const searchbox = await screen.findByRole('searchbox', { name: /search patients/i })
+    await waitFor(() => expect(searchbox).toHaveFocus())
+  })
+
+  it('jumps to the search with the / key, without typing the slash', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    renderLanding()
+    const searchbox = await screen.findByRole('searchbox', { name: /search patients/i })
+
+    await userEvent.keyboard('/')
+
+    expect(searchbox).toHaveFocus()
+    expect(searchbox).toHaveValue('')
+  })
+
+  it('opens the only match when Enter is pressed', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    const router = renderLanding()
+    const searchbox = await screen.findByRole('searchbox', { name: /search patients/i })
+
+    await userEvent.type(searchbox, 'anna')
+    await screen.findByRole('link', { name: /anna andersson/i })
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/patients/1'))
+  })
+
+  it('stays put on Enter while several patients match', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    const router = renderLanding()
+    await userEvent.click(await screen.findByRole('button', { name: /view all/i }))
+    await screen.findByRole('link', { name: /bengt berg/i })
+
+    await userEvent.type(screen.getByRole('searchbox', { name: /search patients/i }), '{Enter}')
+
+    expect(router.state.location.pathname).toBe('/')
+  })
+
   it('is not offered to a patient', async () => {
     setCurrentSessionUserId(PATIENT_ANNA_ID)
     renderLanding()

@@ -50,9 +50,10 @@ function useScrollToHash() {
   const { hash, key } = useLocation()
   useEffect(() => {
     if (hash === '') return
-    document
-      .getElementById(hash.slice(1))
-      ?.scrollIntoView({ behavior: allowsMotion() ? 'smooth' : 'auto' })
+    const target = document.getElementById(hash.slice(1))
+    target?.scrollIntoView({ behavior: allowsMotion() ? 'smooth' : 'auto' })
+    // A section can name the control a visitor arrives for, like the search field.
+    target?.querySelector<HTMLElement>('[data-hash-focus]')?.focus({ preventScroll: true })
   }, [hash, key])
 }
 
