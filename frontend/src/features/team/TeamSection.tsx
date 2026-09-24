@@ -15,6 +15,9 @@ interface TeamSectionProps {
   paused?: boolean
 }
 
+// The main navigation reaches the section as /#team.
+export const TEAM_SECTION_ID = 'team'
+
 // Starts hidden where the browser can tell; without IntersectionObserver it is simply always on.
 const canObserve = () => typeof IntersectionObserver === 'function'
 
@@ -124,7 +127,7 @@ export function TeamSection({ paused = false }: TeamSectionProps) {
   }, [stirred, scene])
 
   return (
-    <section className={styles.section} aria-labelledby="team-heading">
+    <section id={TEAM_SECTION_ID} className={styles.section} aria-labelledby="team-heading">
       <h2 id="team-heading" className={styles.heading}>
         Team
       </h2>

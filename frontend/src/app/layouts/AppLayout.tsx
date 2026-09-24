@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router'
 import { arrivedByDive } from '../../features/auth/arrival'
-import { STAFF_ROLES } from '../../api/schemas'
 import { useLogout } from '../../features/auth/useLogout'
-import { useSession } from '../../features/auth/useSession'
 import styles from './AppLayout.module.css'
 
 const MAIN_CONTENT_ID = 'main-content'
@@ -13,8 +11,6 @@ export function AppLayout() {
   const navigate = useNavigate()
   const mainRef = useRef<HTMLElement>(null)
   const logout = useLogout()
-  const role = useSession().data?.role
-  const canSearchPatients = role !== undefined && STAFF_ROLES.includes(role)
   // The landing page owns the full viewport; every other page sits in the reading column.
   const onLanding = useMatch('/') !== null
   const onJournal = useMatch('/patients/:patientId') !== null
@@ -49,11 +45,10 @@ export function AppLayout() {
           Aletheia
         </Link>
         <nav aria-label="Main" className={styles.nav}>
-          {canSearchPatients && (
-            <Link to="/#patients" className={styles.navLink}>
-              Patients
-            </Link>
-          )}
+          {/* Search is one step from the landing's own action; the team is at the foot of the page. */}
+          <Link to="/#team" className={styles.navLink}>
+            Team
+          </Link>
           <button type="button" className={styles.navLink} onClick={() => logout.mutate()}>
             Sign out
           </button>
