@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import request from 'supertest'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.js'
 import { hashPassword } from './auth/auth.js'
 import { verifyAccessEvent } from './chain/access-event-signing.js'
@@ -109,5 +109,32 @@ describe('a refused attempt on a patient', () => {
 
     expect(res.status).toBe(403)
     expect(blockchain.chain.length).toBe(lengthBefore)
+  })
+})
+
+describe('a refused attempt when the node cannot sign', () => {
+  it('is still refused, and the failure is logged', async () => {
+    const brokenChain = new Blockchain()
+    const brokenApp = createApp({
+      db,
+      blockchain: brokenChain,
+      keyPair: { publicKey: 'not a key', privateKey: 'not a key' },
+    })
+    const stranger = request.agent(brokenApp)
+    await stranger.post('/api/auth/login').send({ username: 'unauth_user', password: PASSWORD })
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      const res = await stranger.get(`/api/patients/${patientId}`)
+
+      expect(res.status).toBe(403)
+      expect(res.body.error.code).toBe('FORBIDDEN')
+      expect(consoleError).toHaveBeenCalled()
+      // Nothing half-written: an unsigned event must never reach the chain.
+      expect(brokenChain.chain.length).toBe(1)
+      expect(brokenChain.pending).toHaveLength(0)
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 })

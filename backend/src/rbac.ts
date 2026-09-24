@@ -63,7 +63,13 @@ export function requireRole(...allowedRoles: UserRole[]) {
       const keyPair = keyPairFor(req)
       const patientId = refusedPatientId(req)
       if (blockchain && keyPair && patientId !== undefined) {
-        logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
+        // A failed write must not turn the refusal into a 500, which would tell the caller
+        // something about the node instead of simply saying no.
+        try {
+          logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
+        } catch (error) {
+          console.error('Could not record a refused access event:', error)
+        }
       }
 
       return res.status(403).json({
