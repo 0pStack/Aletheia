@@ -137,6 +137,22 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Landing page')).toBeInTheDocument()
   })
 
+  it('takes a patient straight to their own record', async () => {
+    renderLoginPage()
+
+    await signIn('patient_anna', 'Password123!')
+
+    expect(await screen.findByText('Journal')).toBeInTheDocument()
+  })
+
+  it('still lands staff on the scene, where they choose a patient', async () => {
+    renderLoginPage()
+
+    await signIn('nurse_jackie', 'Password123!')
+
+    expect(await screen.findByText('Landing page')).toBeInTheDocument()
+  })
+
   it('plays the full dive once per browser session, then a brief one', async () => {
     allowMotion()
     const first = renderLoginPage()

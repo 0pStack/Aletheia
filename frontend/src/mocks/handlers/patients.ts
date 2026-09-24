@@ -1,21 +1,38 @@
 import { http, HttpResponse } from 'msw'
-import { mockPatients, type MockNote, type MockUser } from '../data'
+import type { Note } from '../../api/schemas'
+import { mockPatients, STAFF_ROLES, type MockNote, type MockUser } from '../data'
 import { addMockNote, allMockNotes } from '../noteStore'
 import { badRequest, notFound, requirePatientViewAccess, requireStaffAccess } from './authGuard'
 import { numericParamId } from './params'
 
-// A PATIENT only sees ALL-visibility notes. Staff see STAFF and ALL notes,
-// plus PRIVATE notes they authored themselves.
-function visibleNotes(patientId: number, viewer: MockUser): readonly MockNote[] {
-  const notesForPatient = allMockNotes().filter((note) => note.patientId === patientId)
+// A PATIENT only sees ALL-visibility notes. Staff see STAFF and ALL notes, plus PRIVATE
+// notes they authored. A colleague's PRIVATE note reaches staff as a stub with no text,
+// so a gap in the list is never silent; a patient gets no stub (issue #83).
+function canRead(note: MockNote, viewer: MockUser): boolean {
+  if (note.visibility === 'ALL') return true
+  if (note.visibility === 'STAFF') return STAFF_ROLES.includes(viewer.role)
+  return note.authorId === viewer.id
+}
 
-  if (viewer.role === 'PATIENT') {
-    return notesForPatient.filter((note) => note.visibility === 'ALL')
-  }
+function visibleNotes(patientId: number, viewer: MockUser): readonly Note[] {
+  return allMockNotes()
+    .filter((note) => note.patientId === patientId)
+    .flatMap((note): Note[] => {
+      const base = {
+        id: note.id,
+        authorId: note.authorId,
+        authorName: note.authorName,
+        authorRole: note.authorRole,
+        visibility: note.visibility,
+        createdAt: note.createdAt,
+      }
 
-  return notesForPatient.filter(
-    (note) => note.visibility !== 'PRIVATE' || note.authorId === viewer.id,
-  )
+      if (canRead(note, viewer)) return [{ ...base, redacted: false, text: note.text }]
+      if (STAFF_ROLES.includes(viewer.role) && note.visibility === 'PRIVATE') {
+        return [{ ...base, redacted: true }]
+      }
+      return []
+    })
 }
 
 export const patientHandlers = [
@@ -87,6 +104,7 @@ export const patientHandlers = [
     return HttpResponse.json({
       success: true,
       data: {
+        redacted: false,
         id: note.id,
         authorId: note.authorId,
         authorName: note.authorName,
