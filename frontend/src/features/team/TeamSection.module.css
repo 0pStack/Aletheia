@@ -1,0 +1,126 @@
+/* Sits on the landing page's smoked glass, so it inherits the light text tokens from there. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  max-width: var(--layout-max-width);
+}
+
+.heading {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-heading);
+  letter-spacing: -0.02em;
+}
+
+.stage {
+  position: relative;
+}
+
+/* Over the members so the meerkats stand in their slots, never in the way of the links. It bleeds
+   past the row, so a meerkat scattered by the pointer drifts out instead of being cut off. */
+.canvas {
+  /* Sideways it bleeds no further than the glass's narrowest padding, or a phone scrolls sideways. */
+  --bleed-x: var(--space-6);
+  --bleed-y: var(--space-8);
+
+  position: absolute;
+  top: calc(var(--bleed-y) * -1);
+  left: calc(var(--bleed-x) * -1);
+  z-index: 1;
+  /* Sized explicitly: a canvas is a replaced element, so insets alone leave it at 300 x 150. */
+  width: calc(100% + var(--bleed-x) * 2);
+  height: calc(100% + var(--bleed-y) * 2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-glide);
+}
+
+.stage[data-scene='ready'] .canvas {
+  opacity: 1;
+}
+
+/* Four on one line; a phone gets two rows of two rather than four slivers. */
+.members {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12) var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 40rem) {
+  .members {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+/* A reticle rather than a box, like the patient tiles: the meerkat forms inside the ticks. The
+   slot keeps its height before the scene arrives, so nothing shifts when it does. */
+.slot {
+  --tick: color-mix(in oklch, var(--color-paper) 22%, transparent);
+
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  margin-bottom: var(--space-4);
+  background:
+    linear-gradient(var(--tick), var(--tick)) top left / 0.75rem 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top left / 1px 0.75rem no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top right / 0.75rem 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top right / 1px 0.75rem no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom left / 0.75rem 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom left / 1px 0.75rem no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom right / 0.75rem 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom right / 1px 0.75rem no-repeat;
+}
+
+/* Without the scene the empty reticles would only be holes: the names close up instead. */
+.stage[data-scene='fallback'] .slot {
+  aspect-ratio: auto;
+  height: var(--space-4);
+  background: none;
+}
+
+.name {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-heading);
+}
+
+.handle {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  transition: color var(--duration-ui) var(--ease-glide);
+}
+
+.handle:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: var(--space-1);
+}
+
+.track {
+  max-width: 26ch;
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}

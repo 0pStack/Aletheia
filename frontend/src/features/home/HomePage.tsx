@@ -5,6 +5,7 @@ import { allowsMotion } from '../../shared/motion/allowsMotion'
 import { ROLE_LABELS } from '../../shared/roleLabels'
 import { useSession } from '../auth/useSession'
 import { PATIENT_SEARCH_ID, PatientSearch } from '../patients/PatientSearch'
+import { TeamSection } from '../team/TeamSection'
 // Type only: erased at build time, so the scene stays in its own chunk.
 import type { LandingSceneProps } from './scene/LandingScene'
 import styles from './HomePage.module.css'
@@ -94,6 +95,7 @@ export function HomePage() {
       </section>
       <div className={styles.glass} inert={journal !== null}>
         {canSearch && <PatientSearch />}
+        <TeamSection paused={journal !== null} />
         <footer className={styles.footer}>
           <p className={styles.footerMark}>Aletheia</p>
           <ul className={styles.footerFacts} aria-label="How the access log works">
