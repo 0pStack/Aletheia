@@ -1,5 +1,4 @@
 import { Navigate, type RouteObject } from 'react-router'
-import { AccessLogPage } from '../features/access-log/AccessLogPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { HomePage } from '../features/home/HomePage'
 import { JournalPanel } from '../features/journal/JournalPanel'
@@ -24,7 +23,8 @@ export const routes: RouteObject[] = [
           },
           // Search lives under the landing scene now; this keeps old links and bookmarks working.
           { path: '/patients', element: <Navigate to="/#patients" replace /> },
-          { path: '/patients/:patientId/access-log', element: <AccessLogPage /> },
+          // The access log lives inside the journal, so choosing a patient shows both.
+          { path: '/patients/:patientId/access-log', element: <Navigate to=".." replace /> },
           // Inside the guard so a signed-in user keeps the header on a bad URL.
           { path: '*', element: <NotFoundPage /> },
         ],

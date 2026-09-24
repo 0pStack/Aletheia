@@ -6,6 +6,8 @@ import type { AccessEvent } from './access-event.js'
 import { Block } from './block.js'
 import { Blockchain } from './blockchain.js'
 import { loadChain, saveChain } from './chain-storage.js'
+import { signAccessEvent } from './access-event-signing.js'
+import { generateKeyPair } from './keypair.js'
 
 const testEvent: AccessEvent = {
   id: 'event-1',
@@ -16,6 +18,10 @@ const testEvent: AccessEvent = {
   timestamp: '2026-09-23T10:00:00.000Z',
   serverId: 'server-1',
 }
+
+const testKeys = generateKeyPair()
+const signed = (event: AccessEvent): AccessEvent =>
+  signAccessEvent(event, testKeys.privateKey, testKeys.publicKey)
 
 let dir: string
 let filePath: string
@@ -31,10 +37,10 @@ afterEach(() => {
 
 function buildChain(): Blockchain {
   const blockchain = new Blockchain()
-  blockchain.addBlock([testEvent])
+  blockchain.addBlock([signed(testEvent)])
   blockchain.addBlock([
-    { ...testEvent, id: 'event-2', action: 'WRITE' },
-    { ...testEvent, id: 'event-3' },
+    signed({ ...testEvent, id: 'event-2', action: 'WRITE' }),
+    signed({ ...testEvent, id: 'event-3' }),
   ])
   return blockchain
 }

@@ -1,6 +1,7 @@
 import { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
 import { calculateMerkleRoot } from './merkle.js'
+import { verifyAccessEvent } from './access-event-signing.js'
 
 export interface BlockchainOptions {
   batchSize?: number
@@ -124,6 +125,10 @@ export class Blockchain {
       }
 
       if (currentBlock.hash !== recalculatedHash) {
+        return false
+      }
+
+      if (!currentBlock.data.every(verifyAccessEvent)) {
         return false
       }
 

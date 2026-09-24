@@ -33,7 +33,7 @@ if (!savedChain) {
     `WARNING: the saved chain in ${chainPath} is INVALID. It may have been tampered with.`,
   )
 }
-const app = createApp({ blockchain })
+const app = createApp({ blockchain, keyPair })
 const server = createServer(app)
 attachWebSocketServer(server, peers)
 

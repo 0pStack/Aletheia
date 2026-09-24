@@ -2,8 +2,9 @@ import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router } from 'express'
 import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
+import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
-import { getVisibleNotes } from '../notes/notes.js'
+import { getVisibleNotes, toNoteResponse } from '../notes/notes.js'
 import { requireRole } from '../rbac.js'
 
 interface PatientSummary {
@@ -22,12 +23,11 @@ function digitsOnly(value: string): string {
   return value.replace(/\D/g, '')
 }
 
-function toIso(sqliteDate: string): string {
-  if (sqliteDate.includes('T')) return sqliteDate
-  return new Date(`${sqliteDate.replace(' ', 'T')}Z`).toISOString()
-}
-
-export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): Router {
+export function createPatientsRouter(
+  db: DatabaseType,
+  blockchain: Blockchain,
+  keyPair: KeyPair,
+): Router {
   const router = Router()
 
   router.get('/', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
@@ -77,7 +77,7 @@ export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): 
     }
 
     if (user.role === 'PATIENT' && user.patientId !== patientId) {
-      logAccessEvent(req, blockchain, patientId, 'DENIED')
+      logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
 
       return fail(res, 403, 'FORBIDDEN', 'You do not have permission to access this patient.')
     }
@@ -100,17 +100,9 @@ export function createPatientsRouter(db: DatabaseType, blockchain: Blockchain): 
     const notes = getVisibleNotes(db, patientId, {
       id: user.id,
       role: user.role,
-    }).map((note) => ({
-      id: note.id,
-      authorId: note.author_id,
-      authorName: note.author_name,
-      authorRole: note.author_role,
-      text: note.text,
-      visibility: note.visibility,
-      createdAt: toIso(note.created_at),
-    }))
+    }).map(toNoteResponse)
 
-    logAccessEvent(req, blockchain, patientId, 'READ')
+    logAccessEvent(req, blockchain, patientId, 'READ', keyPair)
 
     return ok(res, {
       patient,

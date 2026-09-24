@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
+import { generateKeyPair } from '../chain/keypair.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
@@ -60,7 +61,7 @@ beforeAll(() => {
 
   blockchain = new Blockchain()
 
-  app = createApp({ db, blockchain })
+  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {
@@ -83,10 +84,71 @@ describe('POST /api/patients/:id/notes', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.success).toBe(true)
+    // The response carries the note, not the database row; the patient is the route.
     expect(res.body.data).toMatchObject({
-      patient_id: patientId,
       text: 'Patient is recovering well.',
       visibility: 'STAFF',
+    })
+  })
+
+  it('returns the created note in the shape the contract defines', async () => {
+    const agent = request.agent(app)
+
+    await agent.post('/api/auth/login').send({
+      username: 'doctor_dr_house',
+      password: PASSWORD,
+    })
+
+    const res = await agent.post(`/api/patients/${patientId}/notes`).send({
+      text: 'Shaped like the read path.',
+      visibility: 'ALL',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.data).toMatchObject({
+      authorName: 'Dr. Gregory House',
+      authorRole: 'DOCTOR',
+      text: 'Shaped like the read path.',
+      visibility: 'ALL',
+    })
+    expect(typeof res.body.data.id).toBe('number')
+    expect(typeof res.body.data.authorId).toBe('number')
+    // ISO, like every other timestamp the API returns.
+    expect(res.body.data.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/)
+    // The database row's own keys must not leak through.
+    expect(Object.keys(res.body.data).sort()).toEqual(
+      [
+        'authorId',
+        'authorName',
+        'authorRole',
+        'createdAt',
+        'id',
+        'redacted',
+        'text',
+        'visibility',
+      ].sort(),
+    )
+  })
+
+  it('refuses a note for a patient that does not exist with an envelope, not a stack trace', async () => {
+    const agent = request.agent(app)
+
+    await agent.post('/api/auth/login').send({
+      username: 'doctor_dr_house',
+      password: PASSWORD,
+    })
+
+    const res = await agent.post('/api/patients/999999/notes').send({
+      text: 'Nobody to attach this to.',
+      visibility: 'STAFF',
+    })
+
+    expect(res.status).toBe(404)
+    expect(res.type).toBe('application/json')
+    expect(res.body).toEqual({
+      success: false,
+      data: null,
+      error: { code: 'NOT_FOUND', message: 'Patient not found.' },
     })
   })
 
@@ -197,7 +259,17 @@ describe('GET /api/patients/:id', () => {
     })
 
     expect(Object.keys(readEvent ?? {}).sort()).toEqual(
-      ['action', 'id', 'patientId', 'role', 'serverId', 'timestamp', 'userId'].sort(),
+      [
+        'action',
+        'id',
+        'patientId',
+        'publicKey',
+        'role',
+        'serverId',
+        'signature',
+        'timestamp',
+        'userId',
+      ].sort(),
     )
   })
 

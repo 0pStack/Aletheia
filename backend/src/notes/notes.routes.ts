@@ -2,11 +2,16 @@ import type { Database as DatabaseType } from 'better-sqlite3'
 import { Router } from 'express'
 import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
+import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
 import { requireRole } from '../rbac.js'
-import { createNote } from './notes.js'
+import { createNote, patientExists, toNoteResponse } from './notes.js'
 
-export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Router {
+export function createNotesRouter(
+  db: DatabaseType,
+  blockchain: Blockchain,
+  keyPair: KeyPair,
+): Router {
   const router = Router()
 
   router.post('/:id/notes', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
@@ -33,6 +38,12 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
       return fail(res, 400, 'BAD_REQUEST', 'Valid patient, text and visibility are required.')
     }
 
+    // Without this the insert fails on the foreign key, which used to surface as an
+    // HTML error page instead of an envelope.
+    if (!patientExists(db, patientId)) {
+      return fail(res, 404, 'NOT_FOUND', 'Patient not found.')
+    }
+
     const note = createNote(db, {
       patientId,
       authorId: user.id,
@@ -40,9 +51,18 @@ export function createNotesRouter(db: DatabaseType, blockchain: Blockchain): Rou
       visibility,
     })
 
-    logAccessEvent(req, blockchain, patientId, 'WRITE')
+    logAccessEvent(req, blockchain, patientId, 'WRITE', keyPair)
 
-    return ok(res, note)
+    // The author is always allowed to read back what they just wrote.
+    return ok(
+      res,
+      toNoteResponse({
+        ...note,
+        author_name: user.name,
+        author_role: user.role,
+        redacted: 0,
+      }),
+    )
   })
 
   return router

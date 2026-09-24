@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Blockchain } from './blockchain.js'
 import type { AccessEvent } from './access-event.js'
+import { signAccessEvent } from './access-event-signing.js'
+import { generateKeyPair } from './keypair.js'
 
 const testEvent: AccessEvent = {
   id: 'event-1',
@@ -11,19 +13,22 @@ const testEvent: AccessEvent = {
   timestamp: '2026-09-19T10:00:00.000Z',
   serverId: 'server-1',
 }
+const testKeys = generateKeyPair()
+const signedTestEvent = (event: AccessEvent): AccessEvent =>
+  signAccessEvent(event, testKeys.privateKey, testKeys.publicKey)
 
 describe('Blockchain', () => {
   it('accepts a valid chain', () => {
     const blockchain = new Blockchain()
 
-    blockchain.addBlock([testEvent])
+    blockchain.addBlock([signedTestEvent(testEvent)])
 
     blockchain.addBlock([
-      {
+      signedTestEvent({
         ...testEvent,
         id: 'event-2',
         action: 'WRITE',
-      },
+      }),
     ])
 
     expect(blockchain.isChainValid()).toBe(true)
@@ -32,7 +37,7 @@ describe('Blockchain', () => {
   it('rejects the chain when block data is changed', () => {
     const blockchain = new Blockchain()
 
-    blockchain.addBlock([testEvent])
+    blockchain.addBlock([signedTestEvent(testEvent)])
 
     const tamperedEvent = blockchain.chain[1]?.data[0]
     if (!tamperedEvent) throw new Error('expected the added block to hold one event')
@@ -43,7 +48,7 @@ describe('Blockchain', () => {
 
   it('rejects a block whose Merkle root does not match its events', () => {
     const blockchain = new Blockchain()
-    const block = blockchain.addBlock([testEvent])
+    const block = blockchain.addBlock([signedTestEvent(testEvent)])
 
     block.merkleRoot = 'f'.repeat(64)
     block.hash = block.calculateHash()
@@ -57,10 +62,10 @@ describe('Blockchain', () => {
 
   it('continues from a chain passed in', () => {
     const original = new Blockchain()
-    original.addBlock([testEvent])
+    original.addBlock([signedTestEvent(testEvent)])
 
     const restored = new Blockchain({ chain: original.chain })
-    restored.addBlock([{ ...testEvent, id: 'event-2' }])
+    restored.addBlock([signedTestEvent({ ...testEvent, id: 'event-2' })])
 
     expect(restored.chain.length).toBe(3)
     expect(restored.isChainValid()).toBe(true)
@@ -76,6 +81,19 @@ describe('Blockchain', () => {
     blockchain.addBlock([testEvent])
 
     expect(saves).toEqual([2, 3])
+  })
+
+  it('rejects a block containing an event with a forged signature', () => {
+    const blockchain = new Blockchain()
+    const attacker = generateKeyPair()
+    const forgedEvent = signAccessEvent(testEvent, attacker.privateKey, testKeys.publicKey)
+    blockchain.addBlock([forgedEvent])
+
+    expect(blockchain.isChainValid()).toBe(false)
+  })
+
+  it('keeps an empty genesis block valid', () => {
+    expect(new Blockchain().isChainValid()).toBe(true)
   })
 })
 
@@ -154,7 +172,7 @@ describe('Blockchain batching', () => {
     const blockchain = new Blockchain({ batchSize: 3 })
 
     for (let i = 1; i <= 7; i++) {
-      blockchain.addEvent({ ...testEvent, id: `e${i}` })
+      blockchain.addEvent(signedTestEvent({ ...testEvent, id: `e${i}` }))
     }
     blockchain.flush()
 

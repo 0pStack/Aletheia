@@ -22,8 +22,12 @@ const SETTLED = 0.002
 // move already under way, not a second announcement.
 const ARRIVAL_MS = 1600
 
-interface LandingSceneProps {
+export interface LandingSceneProps {
   className?: string
+  // The journal covers the whole viewport and locks scrolling, so the scene's own
+  // "scrolled past it" test never fires and a bloom pipeline would keep rendering
+  // every frame behind an opaque panel.
+  paused?: boolean
 }
 
 function sizeToElement(scene: Scene, canvas: HTMLCanvasElement) {
@@ -31,9 +35,12 @@ function sizeToElement(scene: Scene, canvas: HTMLCanvasElement) {
   scene.resize(rect.width, rect.height, Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO))
 }
 
-export function LandingScene({ className }: LandingSceneProps) {
+export function LandingScene({ className, paused = false }: LandingSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hudRef = useRef<HTMLDivElement>(null)
+  // Read inside the loop, which is set up once and outlives any prop change.
+  const pausedRef = useRef(paused)
+  const controlsRef = useRef<{ start: () => void; stop: () => void } | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -93,7 +100,7 @@ export function LandingScene({ className }: LandingSceneProps) {
     }
 
     const start = () => {
-      if (running || !ready || !moving || document.hidden) return
+      if (running || !ready || !moving || document.hidden || pausedRef.current) return
       running = true
       lastNow = performance.now()
       frame = requestAnimationFrame(draw)
@@ -194,8 +201,10 @@ export function LandingScene({ className }: LandingSceneProps) {
     window.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('visibilitychange', onVisibilityChange)
     canvas.addEventListener('webglcontextlost', onContextLost)
+    controlsRef.current = { start, stop }
 
     return () => {
+      controlsRef.current = null
       stop()
       resizeObserver?.disconnect()
       window.removeEventListener('pointermove', onPointerMove)
@@ -209,6 +218,12 @@ export function LandingScene({ className }: LandingSceneProps) {
       scene.dispose()
     }
   }, [])
+
+  useEffect(() => {
+    pausedRef.current = paused
+    if (paused) controlsRef.current?.stop()
+    else controlsRef.current?.start()
+  }, [paused])
 
   return (
     <>

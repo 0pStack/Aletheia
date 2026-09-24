@@ -5,12 +5,14 @@ import { allowsMotion } from '../../shared/motion/allowsMotion'
 import { ROLE_LABELS } from '../../shared/roleLabels'
 import { useSession } from '../auth/useSession'
 import { PATIENT_SEARCH_ID, PatientSearch } from '../patients/PatientSearch'
+// Type only: erased at build time, so the scene stays in its own chunk.
+import type { LandingSceneProps } from './scene/LandingScene'
 import styles from './HomePage.module.css'
 
 // three.js is only needed here, so it stays out of the bundle the login page loads. The scene is
 // scenery: if its chunk fails to load (a deploy mid-session, a dropped connection) the page must
 // still work, so the failure resolves to nothing and the CSS backdrop stands in.
-const LandingScene = lazy<ComponentType>(() =>
+const LandingScene = lazy<ComponentType<LandingSceneProps>>(() =>
   import('./scene/LandingScene')
     .then((module) => ({ default: module.LandingScene }))
     .catch((error: unknown) => {
@@ -67,7 +69,8 @@ export function HomePage() {
     <>
       <div className={styles.scene}>
         <Suspense fallback={null}>
-          <LandingScene />
+          {/* Nothing of the scene is visible behind an open journal, so it stops drawing. */}
+          <LandingScene paused={journal !== null} />
         </Suspense>
       </div>
       {/* While a journal is open the landing is still drawn, but out of reach. */}
