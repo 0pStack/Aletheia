@@ -10,6 +10,7 @@ node_modules/
 
 # Local cryptographic keys
 backend/keys/
+backend/data/
 
 # Blender autosave backups: a .blend1 is a copy of the previous save, so it can be far larger
 # than the file itself (one reached 129 MB, past GitHub's 100 MB limit).

@@ -157,7 +157,8 @@ interface Block {
 * Events wait in a pending list and are turned into a block in batches. The running node is configured (in `index.ts`) to make a block when 5 events are collected or after 2 seconds, whichever comes first. `Blockchain`'s own default is one block per event, which is what the tests use. Until an event is in a block it is *pending* and not yet on the chain.
 * Each event is a Merkle leaf: `sha256(stableStringify(event))` (keys sorted). A pair is combined as `sha256(left + right)` on hex strings. An odd level duplicates its last hash. A block with no events has the root `sha256('')`.
 * The block hash covers `index`, `timestamp`, `merkleRoot`, `previousHash` and `nonce`. It covers the events **through** the Merkle root, so `isChainValid` recomputes the root from `data`.
-* Known limitation: pending events are lost if the node stops before they are flushed. The fix is to flush pending events on shutdown, which only has an effect once the chain is saved to disk.
+* Each node saves its chain to `backend/data/chain-<port>.json` after every new block and loads it on startup. If the saved chain fails `isChainValid`, the node still starts but logs a warning. Pending events are flushed on shutdown (Ctrl+C), so they are saved too. Only a hard crash (e.g. power loss) can lose events that are still pending.
+* The genesis block has a fixed timestamp, so every node has the same genesis block.
 
 ---
 
