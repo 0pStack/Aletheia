@@ -119,6 +119,17 @@ describe('Blockchain', () => {
     expect(saves).toEqual([2, 3])
   })
 
+  it('calls onNewBlock with the newly added block', () => {
+    const blocks = []
+    const blockchain = new Blockchain({
+      onNewBlock: (block) => blocks.push(block),
+    })
+
+    const addedBlock = blockchain.addBlock([testEvent])
+
+    expect(blocks).toEqual([addedBlock])
+  })
+
   it('rejects a block containing an event with a forged signature', () => {
     const blockchain = new Blockchain()
     const attacker = generateKeyPair()
