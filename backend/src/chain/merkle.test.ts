@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { AccessEvent } from './access-event.js'
 import {
@@ -6,7 +7,7 @@ import {
   calculateMerkleRoot,
   getMerkleProof,
   hashLeaf,
-  hashPair,
+  hashNode,
   verifyMerkleProof,
 } from './merkle.js'
 
@@ -26,7 +27,18 @@ const a = makeEvent('a')
 const b = makeEvent('b')
 const c = makeEvent('c')
 
+function sha256Bytes(...parts: Buffer[]): string {
+  return createHash('sha256').update(Buffer.concat(parts)).digest('hex')
+}
+
 describe('hashLeaf', () => {
+  it('prefixes the event with 0x00 before hashing', () => {
+    const json =
+      '{"action":"READ","id":"a","patientId":101,"role":"DOCTOR","serverId":"server-1","timestamp":"2026-09-23T10:00:00.000Z","userId":5}'
+
+    expect(hashLeaf(a)).toBe(sha256Bytes(Buffer.from([0x00]), Buffer.from(json)))
+  })
+
   it('gives the same hash regardless of key order', () => {
     const reordered: AccessEvent = {
       serverId: a.serverId,
@@ -46,6 +58,25 @@ describe('hashLeaf', () => {
   })
 })
 
+describe('hashNode', () => {
+  it('prefixes the raw bytes of both children with 0x01 before hashing', () => {
+    const left = hashLeaf(a)
+    const right = hashLeaf(b)
+
+    expect(hashNode(left, right)).toBe(
+      sha256Bytes(Buffer.from([0x01]), Buffer.from(left, 'hex'), Buffer.from(right, 'hex')),
+    )
+  })
+
+  it('never equals the leaf hash of the same bytes', () => {
+    const left = hashLeaf(a)
+    const right = hashLeaf(b)
+    const asLeaf = sha256Bytes(Buffer.from([0x00]), Buffer.from(left + right, 'hex'))
+
+    expect(hashNode(left, right)).not.toBe(asLeaf)
+  })
+})
+
 describe('calculateMerkleRoot', () => {
   it('returns the empty root for no events', () => {
     expect(calculateMerkleRoot([])).toBe(EMPTY_MERKLE_ROOT)
@@ -56,11 +87,17 @@ describe('calculateMerkleRoot', () => {
   })
 
   it('hashes two leaves together', () => {
-    expect(calculateMerkleRoot([a, b])).toBe(hashPair(hashLeaf(a), hashLeaf(b)))
+    expect(calculateMerkleRoot([a, b])).toBe(hashNode(hashLeaf(a), hashLeaf(b)))
   })
 
-  it('duplicates the last leaf when the count is odd', () => {
-    expect(calculateMerkleRoot([a, b, c])).toBe(calculateMerkleRoot([a, b, c, c]))
+  it('promotes the odd last leaf to the next level unchanged', () => {
+    expect(calculateMerkleRoot([a, b, c])).toBe(
+      hashNode(hashNode(hashLeaf(a), hashLeaf(b)), hashLeaf(c)),
+    )
+  })
+
+  it('differs from the same block with the last event repeated', () => {
+    expect(calculateMerkleRoot([a, b, c])).not.toBe(calculateMerkleRoot([a, b, c, c]))
   })
 
   it('depends on event order', () => {
@@ -92,10 +129,10 @@ describe('getMerkleProof and verifyMerkleProof', () => {
       const leaves = block.map(hashLeaf)
       const root = calculateMerkleRoot(block)
 
-      for (const leaf of leaves) {
-        const proof = getMerkleProof(leaves, leaf)
+      for (const event of block) {
+        const proof = getMerkleProof(leaves, hashLeaf(event))
         expect(proof).not.toBeNull()
-        expect(verifyMerkleProof(leaf, proof ?? [], root)).toBe(true)
+        expect(verifyMerkleProof(event, proof ?? [], root)).toBe(true)
       }
     },
   )
@@ -104,13 +141,12 @@ describe('getMerkleProof and verifyMerkleProof', () => {
     expect(getMerkleProof([hashLeaf(a)], hashLeaf(a))).toEqual([])
   })
 
-  it('pairs the odd last event with itself', () => {
+  it('skips the level where the odd last event was promoted', () => {
     const leaves = [a, b, c].map(hashLeaf)
 
-    expect(getMerkleProof(leaves, hashLeaf(c))?.[0]).toEqual({
-      hash: hashLeaf(c),
-      position: 'right',
-    })
+    expect(getMerkleProof(leaves, hashLeaf(c))).toEqual([
+      { hash: hashNode(hashLeaf(a), hashLeaf(b)), position: 'left' },
+    ])
   })
 
   it('names the side each sibling sits on', () => {
@@ -135,16 +171,16 @@ describe('getMerkleProof and verifyMerkleProof', () => {
     const proof = getMerkleProof(leaves, hashLeaf(b)) ?? []
 
     it('an altered event', () => {
-      expect(verifyMerkleProof(hashLeaf({ ...b, userId: 99 }), proof, root)).toBe(false)
+      expect(verifyMerkleProof({ ...b, userId: 99 }, proof, root)).toBe(false)
     })
 
     it('a proof checked against another block’s root', () => {
-      expect(verifyMerkleProof(hashLeaf(b), proof, calculateMerkleRoot([a, b]))).toBe(false)
+      expect(verifyMerkleProof(b, proof, calculateMerkleRoot([a, b]))).toBe(false)
     })
 
     it('a swapped sibling hash', () => {
       const forged = proof.map((step, i) => (i === 0 ? { ...step, hash: hashLeaf(c) } : step))
-      expect(verifyMerkleProof(hashLeaf(b), forged, root)).toBe(false)
+      expect(verifyMerkleProof(b, forged, root)).toBe(false)
     })
 
     it('a sibling moved to the wrong side', () => {
@@ -152,11 +188,11 @@ describe('getMerkleProof and verifyMerkleProof', () => {
         ...step,
         position: step.position === 'left' ? ('right' as const) : ('left' as const),
       }))
-      expect(verifyMerkleProof(hashLeaf(b), flipped, root)).toBe(false)
+      expect(verifyMerkleProof(b, flipped, root)).toBe(false)
     })
 
     it('a proof with a step removed', () => {
-      expect(verifyMerkleProof(hashLeaf(b), proof.slice(1), root)).toBe(false)
+      expect(verifyMerkleProof(b, proof.slice(1), root)).toBe(false)
     })
   })
 })
