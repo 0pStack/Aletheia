@@ -27,8 +27,10 @@ describe('AccessLog', () => {
 
     renderJournal('/patients/1')
 
-    expect(await screen.findByRole('heading', { name: /who has opened/i })).toBeInTheDocument()
-    const log = await screen.findByRole('table', { name: /access log/i })
+    expect(
+      await screen.findByRole('complementary', { name: /who has opened/i }),
+    ).toBeInTheDocument()
+    const log = await screen.findByRole('list', { name: 'Access log' })
     expect(log).toHaveTextContent('Dr. Gregory House')
     expect(log).toHaveTextContent('Jackie Peyton')
     expect(log).toHaveTextContent('Opened the record')
@@ -40,7 +42,7 @@ describe('AccessLog', () => {
     renderJournal('/patients/1')
 
     expect(await screen.findByRole('heading', { name: /who has opened/i })).toBeInTheDocument()
-    expect(await screen.findByRole('table', { name: /access log/i })).toHaveTextContent(
+    expect(await screen.findByRole('list', { name: 'Access log' })).toHaveTextContent(
       'Dr. Gregory House',
     )
   })
@@ -112,7 +114,7 @@ describe('AccessLog', () => {
 
     renderJournal('/patients/1')
 
-    const log = await screen.findByRole('table', { name: /access log/i })
+    const log = await screen.findByRole('list', { name: 'Access log' })
     expect(log).toHaveTextContent('Wrote a note')
     expect(log).toHaveTextContent('Was refused')
     expect(log).toHaveTextContent('server-2')

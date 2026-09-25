@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { NoteVisibility } from '../../api/schemas'
 import { Button } from '../../shared/ui/Button/Button'
 import { useCreateNote } from './useCreateNote'
@@ -10,22 +10,84 @@ const EMPTY_NOTE_MESSAGE = 'Write something before saving.'
 // the everyday note is for the care team, and defaulting to ALL would share with the
 // patient by accident while PRIVATE would hide the note from the people treating them.
 const VISIBILITY_OPTIONS: readonly { value: NoteVisibility; label: string }[] = [
-  { value: 'STAFF', label: 'Staff only — everyone treating this patient' },
+  { value: 'STAFF', label: 'Staff only: everyone treating this patient' },
   { value: 'ALL', label: 'Visible to the patient as well' },
-  { value: 'PRIVATE', label: 'Private — only you' },
+  { value: 'PRIVATE', label: 'Private: only you' },
 ]
 
-interface NoteFormProps {
+interface NoteDraft {
+  text: string
+  visibility: NoteVisibility
+}
+
+const EMPTY_DRAFT: NoteDraft = { text: '', visibility: 'STAFF' }
+
+interface NoteComposerProps {
   patientId: number
 }
 
-export function NoteForm({ patientId }: NoteFormProps) {
+// Reading is what the journal is for, so writing waits behind one quiet line until asked.
+export function NoteComposer({ patientId }: NoteComposerProps) {
+  const [open, setOpen] = useState(false)
+  // Cancel folds the form away without discarding it: an unsaved clinical note is not
+  // something one misclick should lose.
+  const [draft, setDraft] = useState<NoteDraft>(EMPTY_DRAFT)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const cancelledRef = useRef(false)
+
+  // After Cancel the form is gone, and focus with it: put it back on the line that opened it,
+  // so a keyboard user is not thrown to the top of the journal.
+  useEffect(() => {
+    if (!open && cancelledRef.current) {
+      cancelledRef.current = false
+      triggerRef.current?.focus()
+    }
+  }, [open])
+
+  if (!open) {
+    return (
+      <button
+        ref={triggerRef}
+        type="button"
+        className={styles.composeTrigger}
+        onClick={() => setOpen(true)}
+      >
+        {draft.text.trim() === '' ? 'Write a note…' : 'Continue your note…'}
+      </button>
+    )
+  }
+
+  return (
+    <NoteForm
+      patientId={patientId}
+      initialDraft={draft}
+      onCancel={(current) => {
+        cancelledRef.current = true
+        setDraft(current)
+        setOpen(false)
+      }}
+    />
+  )
+}
+
+interface NoteFormProps {
+  patientId: number
+  initialDraft?: NoteDraft
+  onCancel?: (draft: NoteDraft) => void
+}
+
+export function NoteForm({ patientId, initialDraft = EMPTY_DRAFT, onCancel }: NoteFormProps) {
   const createNote = useCreateNote(patientId)
   const textId = useId()
   const textRef = useRef<HTMLTextAreaElement>(null)
-  const [text, setText] = useState('')
-  const [visibility, setVisibility] = useState<NoteVisibility>('STAFF')
+  const [text, setText] = useState(initialDraft.text)
+  const [visibility, setVisibility] = useState<NoteVisibility>(initialDraft.visibility)
   const [empty, setEmpty] = useState(false)
+
+  // Opened on request, so the cursor goes where the author is about to type.
+  useEffect(() => {
+    textRef.current?.focus()
+  }, [])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -54,7 +116,7 @@ export function NoteForm({ patientId }: NoteFormProps) {
 
   return (
     <form className={styles.noteForm} onSubmit={handleSubmit} noValidate>
-      <label htmlFor={textId} className={styles.sectionHeading}>
+      <label htmlFor={textId} className={styles.visuallyHidden}>
         New note
       </label>
       <textarea
@@ -62,6 +124,7 @@ export function NoteForm({ patientId }: NoteFormProps) {
         ref={textRef}
         className={styles.noteInput}
         rows={4}
+        placeholder="Write a note…"
         value={text}
         onChange={(event) => {
           setText(event.target.value)
@@ -87,17 +150,31 @@ export function NoteForm({ patientId }: NoteFormProps) {
         ))}
       </fieldset>
 
-      {/* Both stay mounted so a screen reader announces the text when it appears. */}
-      <p role="alert" className={styles.noteFormError}>
-        {message}
-      </p>
-      <p role="status" className={styles.noteFormStatus}>
-        {createNote.isSuccess && !createNote.isPending ? 'Note saved.' : ''}
-      </p>
+      {/* Both stay mounted so a screen reader announces the text when it appears. They share
+          one line of space, since only one of them ever speaks at a time. */}
+      <div className={styles.noteMessages}>
+        <p role="alert" className={styles.noteFormError}>
+          {message}
+        </p>
+        <p role="status" className={styles.noteFormStatus}>
+          {createNote.isSuccess && !createNote.isPending ? 'Note saved.' : ''}
+        </p>
+      </div>
 
-      <Button type="submit" variant="solid" aria-disabled={createNote.isPending || undefined}>
-        {createNote.isPending ? 'Saving…' : 'Save note'}
-      </Button>
+      <div className={styles.noteActions}>
+        <Button type="submit" variant="solid" aria-disabled={createNote.isPending || undefined}>
+          {createNote.isPending ? 'Saving…' : 'Save note'}
+        </Button>
+        {onCancel && (
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => onCancel({ text, visibility })}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   )
 }

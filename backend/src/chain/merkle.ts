@@ -45,3 +45,44 @@ export function calculateMerkleRoot(events: AccessEvent[]): string {
 
   return levels.at(-1)?.[0] ?? EMPTY_MERKLE_ROOT
 }
+
+// `position` is where the sibling sits, so the verifier knows which side to hash it on.
+export interface MerkleProofStep {
+  hash: string
+  position: 'left' | 'right'
+}
+
+// The sibling hashes from the leaf up to the root: enough to rebuild the root without
+// seeing any other event in the block.
+export function getMerkleProof(leaves: string[], leaf: string): MerkleProofStep[] | null {
+  let index = leaves.indexOf(leaf)
+  if (index === -1) return null
+
+  const proof: MerkleProofStep[] = []
+
+  for (const level of buildMerkleLevels(leaves).slice(0, -1)) {
+    const isRight = index % 2 === 1
+    const siblingIndex = isRight ? index - 1 : index + 1
+    // An odd last node was paired with itself when the level above was built.
+    const sibling = level[siblingIndex] ?? (level[index] as string)
+
+    proof.push({ hash: sibling, position: isRight ? 'left' : 'right' })
+    index = Math.floor(index / 2)
+  }
+
+  return proof
+}
+
+export function verifyMerkleProof(
+  leaf: string,
+  proof: readonly MerkleProofStep[],
+  root: string,
+): boolean {
+  const computed = proof.reduce(
+    (hash, step) =>
+      step.position === 'left' ? hashPair(step.hash, hash) : hashPair(hash, step.hash),
+    leaf,
+  )
+
+  return computed === root
+}

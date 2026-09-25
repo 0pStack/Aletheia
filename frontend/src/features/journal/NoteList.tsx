@@ -26,6 +26,9 @@ export function NoteList({ notes, showVisibility }: NoteListProps) {
             <span className={styles.author}>{note.authorName}</span>
             <span>{ROLE_LABELS[note.authorRole]}</span>
             <time dateTime={note.createdAt}>{dateFormat.format(new Date(note.createdAt))}</time>
+            {showVisibility && !note.redacted && (
+              <span className={styles.visibility}>{VISIBILITY_LABELS[note.visibility]}</span>
+            )}
           </div>
           {note.redacted ? (
             <p className={styles.restricted}>
@@ -33,12 +36,7 @@ export function NoteList({ notes, showVisibility }: NoteListProps) {
               Private note. Only {note.authorName} can read it.
             </p>
           ) : (
-            <>
-              <p className={styles.noteText}>{note.text}</p>
-              {showVisibility && (
-                <span className={styles.visibility}>{VISIBILITY_LABELS[note.visibility]}</span>
-              )}
-            </>
+            <p className={styles.noteText}>{note.text}</p>
           )}
         </li>
       ))}

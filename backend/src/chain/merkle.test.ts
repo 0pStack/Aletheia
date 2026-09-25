@@ -4,8 +4,10 @@ import {
   EMPTY_MERKLE_ROOT,
   buildMerkleLevels,
   calculateMerkleRoot,
+  getMerkleProof,
   hashLeaf,
   hashPair,
+  verifyMerkleProof,
 } from './merkle.js'
 
 function makeEvent(id: string): AccessEvent {
@@ -77,5 +79,84 @@ describe('buildMerkleLevels', () => {
     const levels = buildMerkleLevels([hashLeaf(a), hashLeaf(b), hashLeaf(c)])
 
     expect(levels.map((level) => level.length)).toEqual([3, 2, 1])
+  })
+})
+
+describe('getMerkleProof and verifyMerkleProof', () => {
+  const events = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(makeEvent)
+
+  it.each([1, 2, 3, 4, 5, 6, 7])(
+    'proves every event in a block of %i against its root',
+    (count) => {
+      const block = events.slice(0, count)
+      const leaves = block.map(hashLeaf)
+      const root = calculateMerkleRoot(block)
+
+      for (const leaf of leaves) {
+        const proof = getMerkleProof(leaves, leaf)
+        expect(proof).not.toBeNull()
+        expect(verifyMerkleProof(leaf, proof ?? [], root)).toBe(true)
+      }
+    },
+  )
+
+  it('needs no siblings when the block holds a single event', () => {
+    expect(getMerkleProof([hashLeaf(a)], hashLeaf(a))).toEqual([])
+  })
+
+  it('pairs the odd last event with itself', () => {
+    const leaves = [a, b, c].map(hashLeaf)
+
+    expect(getMerkleProof(leaves, hashLeaf(c))?.[0]).toEqual({
+      hash: hashLeaf(c),
+      position: 'right',
+    })
+  })
+
+  it('names the side each sibling sits on', () => {
+    const leaves = [a, b].map(hashLeaf)
+
+    expect(getMerkleProof(leaves, hashLeaf(a))).toEqual([{ hash: hashLeaf(b), position: 'right' }])
+    expect(getMerkleProof(leaves, hashLeaf(b))).toEqual([{ hash: hashLeaf(a), position: 'left' }])
+  })
+
+  it('returns null for an empty block', () => {
+    expect(getMerkleProof([], hashLeaf(a))).toBeNull()
+  })
+
+  it('returns null for an event that is not in the block', () => {
+    expect(getMerkleProof([a, b].map(hashLeaf), hashLeaf(c))).toBeNull()
+  })
+
+  describe('rejects', () => {
+    const block = [a, b, c]
+    const leaves = block.map(hashLeaf)
+    const root = calculateMerkleRoot(block)
+    const proof = getMerkleProof(leaves, hashLeaf(b)) ?? []
+
+    it('an altered event', () => {
+      expect(verifyMerkleProof(hashLeaf({ ...b, userId: 99 }), proof, root)).toBe(false)
+    })
+
+    it('a proof checked against another block’s root', () => {
+      expect(verifyMerkleProof(hashLeaf(b), proof, calculateMerkleRoot([a, b]))).toBe(false)
+    })
+
+    it('a swapped sibling hash', () => {
+      const forged = proof.map((step, i) => (i === 0 ? { ...step, hash: hashLeaf(c) } : step))
+      expect(verifyMerkleProof(hashLeaf(b), forged, root)).toBe(false)
+    })
+
+    it('a sibling moved to the wrong side', () => {
+      const flipped = proof.map((step) => ({
+        ...step,
+        position: step.position === 'left' ? ('right' as const) : ('left' as const),
+      }))
+      expect(verifyMerkleProof(hashLeaf(b), flipped, root)).toBe(false)
+    })
+
+    it('a proof with a step removed', () => {
+      expect(verifyMerkleProof(hashLeaf(b), proof.slice(1), root)).toBe(false)
+    })
   })
 })

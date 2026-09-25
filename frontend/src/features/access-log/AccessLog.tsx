@@ -37,39 +37,30 @@ export function AccessLog({ patientId }: AccessLogProps) {
     return <p className={styles.empty}>No one has opened this record yet.</p>
   }
 
+  // A timeline rather than a table: it reads as a record kept over time, and each entry
+  // has room for the verification badge that comes with #43.
   return (
-    <div className={styles.scroll}>
-      <table className={styles.table} aria-label="Access log">
-        <thead>
-          <tr>
-            <th scope="col">Who</th>
-            <th scope="col">What</th>
-            <th scope="col">When</th>
-            <th scope="col">Where</th>
-          </tr>
-        </thead>
-        <tbody>
-          {log.data.map((entry) => (
-            <tr key={entry.eventId} data-refused={entry.action === 'DENIED' || undefined}>
-              <td>
-                <span className={styles.who}>{entry.userName}</span>
-                <span className={styles.role}>{ROLE_LABELS[entry.role]}</span>
-              </td>
-              <td>{ACTION_LABELS[entry.action]}</td>
-              <td>
-                <time dateTime={entry.timestamp}>
-                  {dateFormat.format(new Date(entry.timestamp))}
-                </time>
-              </td>
-              {/* Which node recorded it, and the block it sits in: the entry is on the
-                  chain, not in a table someone could quietly edit. */}
-              <td className={styles.origin}>
-                {entry.serverId} <span className={styles.block}>#{entry.blockIndex}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ol className={styles.timeline} aria-label="Access log">
+      {log.data.map((entry) => (
+        <li
+          key={entry.eventId}
+          className={styles.entry}
+          data-refused={entry.action === 'DENIED' || undefined}
+        >
+          <p className={styles.who}>
+            {entry.userName} <span className={styles.role}>{ROLE_LABELS[entry.role]}</span>
+          </p>
+          <p className={styles.what}>
+            {ACTION_LABELS[entry.action]}
+            <time dateTime={entry.timestamp}>{dateFormat.format(new Date(entry.timestamp))}</time>
+          </p>
+          {/* Which node recorded it, and the block it sits in: the entry is on the
+              chain, not in a table someone could quietly edit. */}
+          <p className={styles.origin}>
+            Recorded by {entry.serverId}, block #{entry.blockIndex}
+          </p>
+        </li>
+      ))}
+    </ol>
   )
 }
