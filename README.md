@@ -61,7 +61,7 @@ _Still to add before hand-in: a journal with its access log, the same record see
 
 ## Backend setup
 
-From the project root:
+Requires Node 24 or later, the version CI runs (`engines` in both `package.json` files says the same). From the project root:
 
 ```bash
 cd backend
@@ -85,7 +85,7 @@ The server listens on http://localhost:3001 (set `PORT` to change it). `GET /api
 
 ## Frontend setup
 
-React 19 + Vite + TypeScript. Requires Node 20.19+ or 22.12+.
+React 19 + Vite + TypeScript. Requires Node 24 or later, like the backend.
 
 ```bash
 cd frontend
