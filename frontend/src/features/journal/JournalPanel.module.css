@@ -8,8 +8,6 @@
   --color-focus: var(--color-paper);
   --color-divider: color-mix(in oklch, var(--color-paper) 20%, transparent);
   --field-line: color-mix(in oklch, var(--color-paper) 32%, transparent);
-  --glass: color-mix(in oklch, var(--color-obsidian) 86%, transparent);
-  --glass-edge: color-mix(in oklch, var(--color-obsidian) 58%, transparent);
   /* Native controls (radios, the textarea grip, the scrollbar) draw their dark variants. */
   color-scheme: dark;
 
@@ -27,12 +25,12 @@
      the journal reads as floating over the scene rather than as a black page. */
   background: linear-gradient(
     90deg,
-    var(--glass-edge),
-    var(--glass) 14%,
-    var(--glass) 86%,
-    var(--glass-edge)
+    var(--glass-surface-edge),
+    var(--glass-surface) 14%,
+    var(--glass-surface) 86%,
+    var(--glass-surface-edge)
   );
-  backdrop-filter: blur(32px) saturate(1.2);
+  backdrop-filter: var(--glass-blur);
 }
 
 .panel:focus {
@@ -41,7 +39,7 @@
 
 @supports not (backdrop-filter: blur(1px)) {
   .panel {
-    background: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
+    background: var(--glass-fallback);
   }
 }
 

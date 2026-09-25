@@ -29,6 +29,20 @@
     var(--color-iridescent-oxblood)
   );
 
+  /* Glass: the one material over the scene (DESIGN.md, The One Glass Rule). Components use these
+     and never mix their own tint. The fallbacks apply under @supports not (backdrop-filter). */
+  --glass-blur: blur(32px) saturate(1.2);
+  --glass-surface: color-mix(in oklch, var(--color-obsidian) 86%, transparent);
+  --glass-fallback: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
+  /* Thinner at the journal's side edges, so the desert glows through there. */
+  --glass-surface-edge: color-mix(in oklch, var(--color-obsidian) 58%, transparent);
+  /* The sign-in panel sits on the liquid hero, which carries its own darkness. */
+  --glass-surface-login: color-mix(in oklch, var(--color-obsidian) 55%, transparent);
+  /* Button-size glass (Glass Action) and its thinner hover. */
+  --glass-surface-action: color-mix(in oklch, var(--color-obsidian) 64%, transparent);
+  --glass-surface-action-hover: color-mix(in oklch, var(--color-obsidian) 56%, transparent);
+  --glass-fallback-action-hover: color-mix(in oklch, var(--color-obsidian) 82%, transparent);
+
   /* Typography */
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
