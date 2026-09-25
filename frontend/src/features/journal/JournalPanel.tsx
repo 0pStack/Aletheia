@@ -43,11 +43,16 @@ export function JournalPanel() {
       role="dialog"
       aria-modal="true"
       aria-labelledby={JOURNAL_TITLE_ID}
+      // Named by the patient's heading once it loads; until then, and on errors, by this.
+      aria-label="Journal"
       tabIndex={-1}
     >
       <div className={styles.sheet}>
         <button type="button" className={styles.close} onClick={close} aria-label="Close journal">
-          <span aria-hidden="true">×</span>
+          {/* Drawn rather than typed: a glyph sits on the text baseline, so it never centres. */}
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.25" />
+          </svg>
         </button>
         <JournalPage />
       </div>
