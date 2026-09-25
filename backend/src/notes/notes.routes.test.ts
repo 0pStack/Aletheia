@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import request from 'supertest'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
@@ -177,6 +177,43 @@ describe('POST /api/patients/:id/notes', () => {
       role: 'DOCTOR',
       action: 'WRITE',
     })
+  })
+
+  it('keeps no note when its WRITE event cannot be recorded', async () => {
+    const agent = request.agent(app)
+
+    await agent.post('/api/auth/login').send({
+      username: 'doctor_dr_house',
+      password: PASSWORD,
+    })
+
+    const countNotes = (): number =>
+      (
+        db.prepare('SELECT COUNT(*) AS count FROM notes WHERE patient_id = ?').get(patientId) as {
+          count: number
+        }
+      ).count
+    const notesBefore = countNotes()
+
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const addEvent = vi.spyOn(blockchain, 'addEvent').mockImplementationOnce(() => {
+      throw new Error('signing failed')
+    })
+
+    let res: request.Response
+    try {
+      res = await agent.post(`/api/patients/${patientId}/notes`).send({
+        text: 'A note the chain never heard about.',
+        visibility: 'STAFF',
+      })
+    } finally {
+      addEvent.mockRestore()
+      consoleError.mockRestore()
+    }
+
+    expect(res.status).toBe(500)
+    // A note without its audit event would be a write nobody can trace.
+    expect(countNotes()).toBe(notesBefore)
   })
 
   it('rejects a patient trying to create a note', async () => {
