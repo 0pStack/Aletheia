@@ -18,31 +18,47 @@ export function auditLogFailures(): AuditLogFailures {
   return failures
 }
 
-// The patient id is left out on purpose: this goes to the server log, not to the chain.
-function reportFailure(req: Request, action: AccessEvent['action'], error: unknown): void {
+// Patient ids never reach this: it goes to the server log, not to the chain.
+function recordFailures(
+  total: number,
+  denied: number,
+  error: unknown,
+  details: Readonly<Record<string, unknown>>,
+): void {
   failures = Object.freeze({
-    count: failures.count + 1,
-    deniedCount: failures.deniedCount + (action === 'DENIED' ? 1 : 0),
+    count: failures.count + total,
+    deniedCount: failures.deniedCount + denied,
     lastFailureAt: new Date().toISOString(),
   })
 
-  const user = req.session.user
-  const context = {
-    action,
-    userId: user?.id ?? null,
-    role: user?.role ?? null,
+  const headline =
+    denied > 0
+      ? 'ALERT: a refused access could not be recorded on the audit chain.'
+      : 'Could not record an access event on the audit chain.'
+
+  console.error(headline, {
+    ...details,
     serverId: resolveServerId(process.env),
     failuresSinceStart: failures.count,
     deniedFailuresSinceStart: failures.deniedCount,
     reason: error instanceof Error ? error.message : 'Unknown error',
-  }
+  })
+}
 
-  const headline =
-    action === 'DENIED'
-      ? 'ALERT: a refused access could not be recorded on the audit chain.'
-      : 'Could not record an access event on the audit chain.'
+function reportFailure(req: Request, action: AccessEvent['action'], error: unknown): void {
+  const user = req.session.user
+  recordFailures(1, action === 'DENIED' ? 1 : 0, error, {
+    action,
+    userId: user?.id ?? null,
+    role: user?.role ?? null,
+  })
+}
 
-  console.error(headline, context)
+// Wired to Blockchain's onFlushError. The events were queued without error, so this is
+// the only place a batch that later failed to be saved gets counted.
+export function reportFlushFailure(error: unknown, events: readonly AccessEvent[]): void {
+  const denied = events.filter((event) => event.action === 'DENIED').length
+  recordFailures(events.length, denied, error, { deferredFlush: true, events: events.length })
 }
 
 export function logAccessEvent(

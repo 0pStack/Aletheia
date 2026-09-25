@@ -1,5 +1,6 @@
 import { createServer } from 'node:http'
 import { createApp } from './app.js'
+import { reportFlushFailure } from './audit-logger.js'
 import { loadNodeKeyPair } from './chain/node-identity.js'
 import { resolvePort } from './config/port.js'
 import { resolvePeers } from './config/peers.js'
@@ -25,6 +26,7 @@ const blockchain = new Blockchain({
   flushIntervalMs: 2000,
   chain: savedChain,
   onBlockAdded: (chain) => saveChain(chainPath, chain),
+  onFlushError: reportFlushFailure,
   onNewBlock: (block) => {
     webSocketServer.broadcast({
       type: 'NEW_BLOCK',

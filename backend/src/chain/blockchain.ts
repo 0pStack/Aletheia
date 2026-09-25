@@ -8,6 +8,7 @@ export interface BlockchainOptions {
   chain?: Block[]
   onBlockAdded?: (chain: Block[]) => void
   onNewBlock?: (block: Block) => void
+  onFlushError?: (error: unknown, events: readonly AccessEvent[]) => void
 }
 
 const GENESIS_TIMESTAMP = '2026-01-01T00:00:00.000Z'
@@ -20,6 +21,7 @@ export class Blockchain {
   private flushTimer: ReturnType<typeof setTimeout> | undefined
   private readonly onBlockAdded: ((chain: Block[]) => void) | undefined
   private readonly onNewBlock: ((block: Block) => void) | undefined
+  private readonly onFlushError: BlockchainOptions['onFlushError']
 
   constructor(options: BlockchainOptions = {}) {
     const batchSize = options.batchSize ?? 1
@@ -32,6 +34,7 @@ export class Blockchain {
     this.flushIntervalMs = options.flushIntervalMs
     this.onBlockAdded = options.onBlockAdded
     this.onNewBlock = options.onNewBlock
+    this.onFlushError = options.onFlushError
     this.chain =
       options.chain && options.chain.length > 0 ? options.chain : [this.createGenesisBlock()]
   }
@@ -89,7 +92,35 @@ export class Blockchain {
     const events = this.pending
     this.pending = []
 
-    return this.addBlock(events)
+    try {
+      return this.addBlock(events)
+    } catch (error) {
+      // A block that reached the chain before a hook failed is written by the next save,
+      // which stores the whole chain. Re-queuing it would record the events twice.
+      if (this.getLatestBlock().data !== events) {
+        this.pending = [...events, ...this.pending]
+      }
+      throw error
+    }
+  }
+
+  // Nothing up a timer's stack can catch this, and a throw here would take the node down
+  // with every queued event still in memory.
+  private flushFromTimer(): void {
+    const events = this.pending
+
+    try {
+      this.flush()
+    } catch (error) {
+      if (this.onFlushError) {
+        this.onFlushError(error, events)
+        return
+      }
+      console.error(
+        'Deferred chain flush failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      )
+    }
   }
 
   private startFlushTimer(): void {
@@ -97,7 +128,7 @@ export class Blockchain {
       return
     }
 
-    this.flushTimer = setTimeout(() => this.flush(), this.flushIntervalMs)
+    this.flushTimer = setTimeout(() => this.flushFromTimer(), this.flushIntervalMs)
     this.flushTimer.unref()
   }
 
