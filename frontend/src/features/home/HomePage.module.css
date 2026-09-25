@@ -80,9 +80,9 @@
   color: var(--color-paper);
   font-size: var(--text-md);
   text-decoration: none;
-  background: color-mix(in oklch, var(--color-obsidian) 64%, transparent);
+  background: var(--glass-surface-action);
   border: 1px solid color-mix(in oklch, var(--color-paper) 14%, transparent);
-  backdrop-filter: blur(32px) saturate(1.2);
+  backdrop-filter: var(--glass-blur);
   transition:
     background-color var(--duration-ui) var(--ease-glide),
     border-color var(--duration-ui) var(--ease-glide);
@@ -104,7 +104,7 @@
 }
 
 .action:hover {
-  background: color-mix(in oklch, var(--color-obsidian) 56%, transparent);
+  background: var(--glass-surface-action-hover);
   border-color: color-mix(in oklch, var(--color-paper) 32%, transparent);
 }
 
@@ -156,8 +156,8 @@
   position: absolute;
   inset: var(--glass-fade) 0 0;
   z-index: -1;
-  background: color-mix(in oklch, var(--color-obsidian) 86%, transparent);
-  backdrop-filter: blur(32px) saturate(1.2);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
 }
 
 .glass::after {
@@ -171,26 +171,22 @@
     to bottom,
     transparent,
     color-mix(in oklch, var(--color-obsidian) 44%, transparent) 45%,
-    color-mix(in oklch, var(--color-obsidian) 86%, transparent)
+    var(--glass-surface)
   );
 }
 
 @supports not (backdrop-filter: blur(1px)) {
   .action,
   .glass::before {
-    background: color-mix(in oklch, var(--color-obsidian) 90%, transparent);
+    background: var(--glass-fallback);
   }
 
   .glass::after {
-    background: linear-gradient(
-      to bottom,
-      transparent,
-      color-mix(in oklch, var(--color-obsidian) 90%, transparent)
-    );
+    background: linear-gradient(to bottom, transparent, var(--glass-fallback));
   }
 
   .action:hover {
-    background: color-mix(in oklch, var(--color-obsidian) 82%, transparent);
+    background: var(--glass-fallback-action-hover);
   }
 }
 
