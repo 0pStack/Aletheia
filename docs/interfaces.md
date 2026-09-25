@@ -302,8 +302,9 @@ All endpoints return HTTP status code matching the envelope state (200/201 on su
   ```
 
 #### 8. `GET /api/verify/:eventId`
-* **Access:** Authenticated user
-* **Behavior:** Returns cryptographic proof (Merkle proof) validating that the event exists unchanged on the blockchain.
+* **Access:** `DOCTOR`, `NURSE`, `CLINIC`, and `PATIENT` for events in their own record. A patient asking about another patient's event gets the same 404 as for an unknown event, so event ids cannot be probed.
+* **Behavior:** Returns cryptographic proof (Merkle proof) validating that the event exists unchanged on the blockchain. `proof` lists the sibling hashes from the leaf up to `merkleRoot`, each with the side it sits on (`{ "hash": "...", "position": "left" | "right" }`); leaves and nodes are hashed as in RFC 6962 (#138). `isValid` is true when the proof rebuilds the block's `merkleRoot` and no block up to and including `blockIndex` fails validation. Checking a proof is not itself logged.
+* **Errors:** `400 BAD_REQUEST` (id is not a UUID), `404 NOT_FOUND` (unknown event, or another patient's), `409 PENDING` (the event is queued and not yet sealed into a block; retry after a few seconds).
 * **Success Response (`data`):**
   ```json
   {
