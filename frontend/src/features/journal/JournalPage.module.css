@@ -16,37 +16,74 @@
   border-bottom: 1px solid var(--color-divider);
 }
 
+/* The patient is the one hero of this view (DESIGN.md, Headline). */
 .header h1 {
-  margin-bottom: var(--space-2);
+  max-width: 18ch;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-hero);
+  font-weight: var(--weight-light);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .eyebrow,
-.sectionHeading,
-.visibility {
+.restrictedMark {
   font-size: var(--text-xs);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
 .eyebrow {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .personalNumber {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
+/* Notes on the left, the access log as a rail on the right. One column below 64rem. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-16);
+}
+
+@media (min-width: 64rem) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+    gap: clamp(var(--space-12), 6vw, 6rem);
+  }
+
+  /* The panel is the scroll container, so the rail stays in view while the notes scroll. */
+  .rail {
+    position: sticky;
+    top: var(--space-8);
+    align-self: start;
+  }
+}
+
 .sectionHeading {
-  font-weight: var(--weight-regular);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-heading);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.rail .sectionHeading {
+  margin-bottom: var(--space-6);
 }
 
 .scope {
   max-width: 65ch;
-  margin-bottom: var(--space-4);
+  text-wrap: pretty;
+  margin-bottom: var(--space-6);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
@@ -69,6 +106,12 @@
   border-top: 1px solid var(--color-divider);
 }
 
+/* The composer's underline, or the scope line, already opens the list. */
+.note:first-child {
+  border-top: 0;
+  padding-top: var(--space-2);
+}
+
 .note:last-child {
   border-bottom: 1px solid var(--color-divider);
 }
@@ -78,6 +121,7 @@
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
   font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
 
@@ -88,37 +132,89 @@
 
 .noteText {
   max-width: 65ch;
+  text-wrap: pretty;
 }
 
-.visibility {
-  align-self: flex-start;
+/* Who can read the note, said once in the meta line rather than as a tag of its own. */
+.visibility::before {
+  content: '·';
+  margin-right: var(--space-3);
 }
 
-/* A note this reader may not open. A hairline and a muted mark, not a filled warning:
-   nothing has gone wrong, the note is simply not theirs to read. */
+/* Narrow, the meta line wraps and the dot would start a line on its own. */
+@media (max-width: 40rem) {
+  .visibility::before {
+    content: none;
+  }
+}
+
+/* A note this reader may not open: a frosted inset (DESIGN.md), not a warning.
+   Nothing has gone wrong, the note is simply not theirs to read. */
 .restricted {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   max-width: 65ch;
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--color-iridescent-oxblood);
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in oklch, var(--color-paper) 5%, transparent);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
-.restrictedMark {
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-iridescent-oxblood);
+/* Closed, the composer is one line that looks like the field it opens into. */
+.composeTrigger {
+  display: block;
+  width: 100%;
+  max-width: 65ch;
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--field-line);
+  border-radius: var(--radius-sharp);
+  background: none;
+  color: var(--color-placeholder);
+  font: inherit;
+  font-size: var(--text-lg);
+  text-align: left;
+  cursor: text;
+  transition:
+    border-color var(--duration-ui) var(--ease-glide),
+    color var(--duration-ui) var(--ease-glide);
+}
+
+.composeTrigger:hover {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text-muted);
+}
+
+/* Focused, it behaves like the field it stands in for: the rule thickens, no ring. */
+.composeTrigger:focus-visible {
+  outline: 0;
+  border-bottom-color: var(--color-focus);
+  box-shadow: 0 1px 0 0 var(--color-focus);
+  color: var(--color-text-muted);
 }
 
 .noteForm {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+/* The trigger opens into the form in place: a short rise, no jump. */
+@media (prefers-reduced-motion: no-preference) {
+  .noteForm {
+    animation: formIn 360ms var(--ease-glide) backwards;
+  }
+}
+
+@keyframes formIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
 }
 
 .noteInput {
@@ -126,13 +222,18 @@
   max-width: 65ch;
   padding: var(--space-3) 0;
   font: inherit;
+  font-size: var(--text-lg);
   color: var(--color-text);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--color-border-input);
+  border-bottom: 1px solid var(--field-line);
   border-radius: var(--radius-sharp);
   resize: vertical;
   transition: border-color var(--duration-ui) var(--ease-glide);
+}
+
+.noteInput::placeholder {
+  color: var(--color-placeholder);
 }
 
 .noteInput:hover {
@@ -156,23 +257,77 @@
   border: 0;
 }
 
+.visibilityChoice legend {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* The whole row is the hit area, tall enough to tap. */
 .visibilityOption {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  min-height: 2.25rem;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+/* The browser's blue would be the only hue in the interface. */
+.visibilityOption input {
+  accent-color: var(--color-text);
+}
+
+.noteActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.cancel {
+  min-height: 2.75rem;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.cancel:hover {
+  color: var(--color-text);
+}
+
+/* Stacked in one cell rather than hidden: a live region that is display:none when its
+   text arrives may never be announced. */
+.noteMessages {
+  display: grid;
+  min-height: 1lh;
   font-size: var(--text-sm);
 }
 
-.noteFormError,
-.noteFormStatus {
-  font-size: var(--text-sm);
-  min-height: 1lh;
+.noteMessages p {
+  grid-area: 1 / 1;
 }
 
 .noteFormError {
-  color: var(--color-iridescent-oxblood);
+  color: var(--color-text);
 }
 
 .noteFormStatus {
   color: var(--color-text-muted);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

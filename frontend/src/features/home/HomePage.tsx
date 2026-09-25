@@ -8,6 +8,7 @@ import { PATIENT_SEARCH_ID, PatientSearch } from '../patients/PatientSearch'
 import { TeamSection } from '../team/TeamSection'
 // Type only: erased at build time, so the scene stays in its own chunk.
 import type { LandingSceneProps } from './scene/LandingScene'
+import markUrl from './aletheia-mark.png'
 import styles from './HomePage.module.css'
 
 // three.js is only needed here, so it stays out of the bundle the login page loads. The scene is
@@ -98,7 +99,10 @@ export function HomePage() {
         {canSearch && <PatientSearch />}
         <TeamSection paused={journal !== null} />
         <footer className={styles.footer}>
-          <p className={styles.footerMark}>Aletheia</p>
+          <p className={styles.footerMark}>
+            <img src={markUrl} alt="" width={81} height={96} />
+            Aletheia
+          </p>
           <ul className={styles.footerFacts} aria-label="How the access log works">
             {LOG_FACTS.map((fact) => (
               <li key={fact}>{fact}</li>

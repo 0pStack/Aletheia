@@ -105,46 +105,50 @@ export class Blockchain {
     }
   }
 
-  isChainValid(): boolean {
+  findFirstInvalidBlockIndex(): number | null {
     const genesisBlock = this.chain[0]
 
     if (!genesisBlock || genesisBlock.previousHash !== '0') {
-      return false
+      return 0
     }
 
     for (let i = 0; i < this.chain.length; i++) {
       const currentBlock = this.chain[i]
 
       if (!currentBlock) {
-        return false
+        return i
       }
 
       const recalculatedHash = currentBlock.calculateHash()
       if (currentBlock.merkleRoot !== calculateMerkleRoot(currentBlock.data)) {
-        return false
+        return i
       }
 
       if (currentBlock.hash !== recalculatedHash) {
-        return false
+        return i
       }
 
       if (!currentBlock.data.every(verifyAccessEvent)) {
-        return false
+        return i
       }
 
       if (i > 0) {
         const previousBlock = this.chain[i - 1]
 
         if (!previousBlock) {
-          return false
+          return i
         }
 
         if (currentBlock.previousHash !== previousBlock.hash) {
-          return false
+          return i
         }
       }
     }
 
-    return true
+    return null
+  }
+
+  isChainValid(): boolean {
+    return this.findFirstInvalidBlockIndex() === null
   }
 }

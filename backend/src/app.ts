@@ -6,6 +6,7 @@ import { createAuthRouter } from './auth/auth.routes.js'
 import { Blockchain } from './chain/blockchain.js'
 import type { KeyPair } from './chain/keypair.js'
 import { db as defaultDb } from './db.js'
+import { ok } from './envelope.js'
 import { createNotesRouter } from './notes/notes.routes.js'
 import { createPatientsRouter } from './patients/patients.routes.js'
 
@@ -64,6 +65,15 @@ export function createApp(options: CreateAppOptions): Express {
       success: true,
       data: { status: 'ok' },
       error: null,
+    })
+  })
+
+  app.get('/api/chain/status', (_req, res) => {
+    const firstInvalidBlockIndex = blockchain.findFirstInvalidBlockIndex()
+
+    return ok(res, {
+      valid: firstInvalidBlockIndex === null,
+      firstInvalidBlockIndex,
     })
   })
 

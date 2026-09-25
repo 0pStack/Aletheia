@@ -10,51 +10,84 @@
   color: var(--color-text-muted);
 }
 
-.scroll {
-  overflow-x: auto;
+/* Each entry hangs a dot on a hairline, and the hairline runs from dot to dot only, so it
+   neither starts above the first entry nor trails past the last. */
+.timeline {
+  --dot: 7px;
+  /* The dot centres on the name's line: 1rem type at 1.5 line height. */
+  --dot-centre: 0.75rem;
+  margin: 0;
+  padding: 0 0 0 var(--space-6);
+  list-style: none;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
+.entry {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-6);
   font-size: var(--text-sm);
 }
 
-.table th {
-  padding-bottom: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-regular);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  text-align: left;
-  border-bottom: 1px solid var(--color-divider);
+.entry:last-child {
+  padding-bottom: 0;
 }
 
-.table td {
-  padding-block: var(--space-3);
-  border-bottom: 1px solid var(--color-divider);
-  vertical-align: top;
-  white-space: nowrap;
+.entry::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--dot-centre) - var(--dot) / 2);
+  left: calc(-1 * var(--space-6));
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+}
+
+.entry:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: var(--dot-centre);
+  bottom: calc(-1 * var(--dot-centre));
+  left: calc(-1 * var(--space-6) + var(--dot) / 2 - 0.5px);
+  width: 1px;
+  background: var(--color-divider);
 }
 
 .who {
-  display: block;
   color: var(--color-text);
+  font-size: var(--text-md);
 }
 
 .role,
-.origin,
-.block {
+.origin {
   color: var(--color-text-muted);
 }
 
+.what {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  color: var(--color-text);
+}
+
+.what time {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .origin {
-  font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
 
-/* A refused attempt is the entry a patient is looking for. */
-.table tr[data-refused] td:nth-child(2) {
-  color: var(--color-iridescent-oxblood);
+/* A refused attempt is the entry a patient is looking for. It is marked by weight and a
+   hollow dot, never by colour: status is carried in words (DESIGN.md, Scene Owns Colour). */
+.entry[data-refused] .what {
+  font-weight: var(--weight-semibold);
+}
+
+.entry[data-refused]::before {
+  background: none;
+  border: 1px solid var(--color-text);
 }
