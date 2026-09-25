@@ -236,5 +236,4 @@ describe('attachWebSocketServer', () => {
     webSocketServer.close()
     server.close()
   })
-
 })
