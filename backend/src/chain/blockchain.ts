@@ -1,7 +1,6 @@
 import { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
-import { calculateMerkleRoot } from './merkle.js'
-import { verifyAccessEvent } from './access-event-signing.js'
+import { findFirstInvalidBlockIndex } from './chain-validation.js'
 
 export interface BlockchainOptions {
   batchSize?: number
@@ -110,46 +109,7 @@ export class Blockchain {
   }
 
   findFirstInvalidBlockIndex(): number | null {
-    const genesisBlock = this.chain[0]
-
-    if (!genesisBlock || genesisBlock.previousHash !== '0') {
-      return 0
-    }
-
-    for (let i = 0; i < this.chain.length; i++) {
-      const currentBlock = this.chain[i]
-
-      if (!currentBlock) {
-        return i
-      }
-
-      const recalculatedHash = currentBlock.calculateHash()
-      if (currentBlock.merkleRoot !== calculateMerkleRoot(currentBlock.data)) {
-        return i
-      }
-
-      if (currentBlock.hash !== recalculatedHash) {
-        return i
-      }
-
-      if (!currentBlock.data.every(verifyAccessEvent)) {
-        return i
-      }
-
-      if (i > 0) {
-        const previousBlock = this.chain[i - 1]
-
-        if (!previousBlock) {
-          return i
-        }
-
-        if (currentBlock.previousHash !== previousBlock.hash) {
-          return i
-        }
-      }
-    }
-
-    return null
+    return findFirstInvalidBlockIndex(this.chain)
   }
 
   isChainValid(): boolean {
