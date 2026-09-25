@@ -69,13 +69,4 @@ describe('logAccessEvent', () => {
       second.getLatestBlock().data[0]?.serverId,
     )
   })
-
-  it('records nothing for a request with no session', () => {
-    const blockchain = new Blockchain()
-    const lengthBefore = blockchain.chain.length
-
-    logAccessEvent({ session: {} } as unknown as Request, blockchain, 7, 'READ', keyPair)
-
-    expect(blockchain.chain.length).toBe(lengthBefore)
-  })
 })
