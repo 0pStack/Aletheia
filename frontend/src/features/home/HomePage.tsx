@@ -5,6 +5,7 @@ import { allowsMotion } from '../../shared/motion/allowsMotion'
 import { ROLE_LABELS } from '../../shared/roleLabels'
 import { useSession } from '../auth/useSession'
 import { PATIENT_SEARCH_ID, PatientSearch } from '../patients/PatientSearch'
+import { TeamSection } from '../team/TeamSection'
 // Type only: erased at build time, so the scene stays in its own chunk.
 import type { LandingSceneProps } from './scene/LandingScene'
 import markUrl from './aletheia-mark.png'
@@ -50,9 +51,10 @@ function useScrollToHash() {
   const { hash, key } = useLocation()
   useEffect(() => {
     if (hash === '') return
-    document
-      .getElementById(hash.slice(1))
-      ?.scrollIntoView({ behavior: allowsMotion() ? 'smooth' : 'auto' })
+    const target = document.getElementById(hash.slice(1))
+    target?.scrollIntoView({ behavior: allowsMotion() ? 'smooth' : 'auto' })
+    // A section can name the control a visitor arrives for, like the search field.
+    target?.querySelector<HTMLElement>('[data-hash-focus]')?.focus({ preventScroll: true })
   }, [hash, key])
 }
 
@@ -95,6 +97,7 @@ export function HomePage() {
       </section>
       <div className={styles.glass} inert={journal !== null}>
         {canSearch && <PatientSearch />}
+        <TeamSection paused={journal !== null} />
         <footer className={styles.footer}>
           <p className={styles.footerMark}>
             <img src={markUrl} alt="" width={81} height={96} />

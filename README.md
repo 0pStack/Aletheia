@@ -250,3 +250,5 @@ Working agreement: [docs/groupcontract.md](docs/groupcontract.md). Standups: [do
 ## Credits
 
 Login hero image: [Swirling abstract pattern of green and orange gradients](https://unsplash.com/photos/i-BP0cmbfRo) by [Logan Voss](https://unsplash.com/@loganvoss), used under the [Unsplash License](https://unsplash.com/license).
+
+Team section meerkat: [Meerkat Statue In Garden](https://sketchfab.com/3d-models/meerkat-statue-in-garden-89a756b132134ed3afed6e866dd22289) by [Gypsee](https://sketchfab.com/Gypsee), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Modified: ground removed, remeshed, and baked to the distance field in `frontend/public/team/meerkat_64.sdf`.

@@ -1,18 +1,44 @@
-/* Sits on the landing page's smoked glass, so it inherits the light text tokens from there. */
+/* The page's working tool, so it gets a surface of its own: a band of darker smoked glass from
+   edge to edge of the screen, lit along its top edge like the hero's action. That action lands
+   here, and the shared edge says so. The band cancels the glass sheet's side padding and puts
+   it back inside, so its content keeps the page's left edge. It inherits the light text tokens
+   from the glass it sits on. */
 .section {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  max-width: 44rem;
-  /* Breathing room above the heading when the nav link scrolls here. */
+  gap: var(--space-8);
+  margin-inline: calc(var(--glass-inline, 0px) * -1);
+  padding: clamp(var(--space-8), 5vw, var(--space-16)) var(--glass-inline, var(--space-6));
+  background: color-mix(in oklch, var(--color-obsidian) 60%, transparent);
+  /* A band, not a box: lines above and below only, since the screen's edges close the sides. */
+  border-block: 1px solid color-mix(in oklch, var(--color-paper) 14%, transparent);
+  border-radius: var(--radius-sharp);
+  /* Breathing room above the panel when the hero's action scrolls here. */
   scroll-margin-top: var(--space-6);
 }
 
+.section::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--color-paper) 55%, transparent) 50%,
+    transparent
+  );
+}
+
+/* A step below the greeting on the hero and well above every other heading on the page. */
 .heading {
-  font-size: var(--text-2xl);
+  font-size: calc(var(--text-2xl) * 1.5);
   font-weight: var(--weight-light);
   line-height: var(--leading-heading);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .form {
@@ -28,17 +54,26 @@
   color: var(--color-text-muted);
 }
 
-/* Editorial field like sign-in: one hairline, which thickens on focus. */
+/* Editorial field like sign-in: one hairline, which thickens on focus. Set large: the search
+   line is the thing to look at in this panel, not its heading. */
 .input {
-  padding: var(--space-3) 0;
+  padding: var(--space-4) 0;
   border: 0;
   border-bottom: 1px solid var(--field-line);
   border-radius: var(--radius-sharp);
   background: transparent;
   color: var(--color-text);
   caret-color: var(--color-text);
-  font-size: var(--text-lg);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-light);
   transition: border-color var(--duration-ui) var(--ease-glide);
+}
+
+/* On a phone the large line would cut its own placeholder short. */
+@media (max-width: 40rem) {
+  .input {
+    font-size: var(--text-xl);
+  }
 }
 
 .input::placeholder {
