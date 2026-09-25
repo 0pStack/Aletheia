@@ -44,14 +44,18 @@ export function createNotesRouter(
       return fail(res, 404, 'NOT_FOUND', 'Patient not found.')
     }
 
-    const note = createNote(db, {
-      patientId,
-      authorId: user.id,
-      text: text.trim(),
-      visibility,
-    })
-
-    logAccessEvent(req, blockchain, patientId, 'WRITE', keyPair)
+    // One transaction, so a note whose WRITE event cannot be recorded is rolled back
+    // instead of sitting in the journal with no trace on the chain.
+    const note = db.transaction(() => {
+      const created = createNote(db, {
+        patientId,
+        authorId: user.id,
+        text: text.trim(),
+        visibility,
+      })
+      logAccessEvent(req, blockchain, patientId, 'WRITE', keyPair)
+      return created
+    })()
 
     // The author is always allowed to read back what they just wrote.
     return ok(

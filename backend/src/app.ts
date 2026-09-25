@@ -5,6 +5,7 @@ import { createAccessLogRouter } from './access-log/access-log.routes.js'
 import { createAuthRouter } from './auth/auth.routes.js'
 import { Blockchain } from './chain/blockchain.js'
 import type { KeyPair } from './chain/keypair.js'
+import { resolveSessionSecret } from './config/session-secret.js'
 import { db as defaultDb } from './db.js'
 import { ok } from './envelope.js'
 import { createNotesRouter } from './notes/notes.routes.js'
@@ -48,7 +49,7 @@ export function createApp(options: CreateAppOptions): Express {
 
   app.use(
     session({
-      secret: process.env.SESSION_SECRET ?? 'dev-only-insecure-secret',
+      secret: resolveSessionSecret(process.env.SESSION_SECRET),
       resave: false,
       saveUninitialized: false,
       cookie: {
