@@ -1,9 +1,8 @@
 import type { Server } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
+import { parseWebSocketMessage } from './websocket-message.js'
 
-export const WEB_SOCKET_MESSAGE_TYPES = ['NEW_BLOCK', 'CHAIN_REQUEST', 'CHAIN_RESPONSE'] as const
-
-export type WebSocketMessageType = (typeof WEB_SOCKET_MESSAGE_TYPES)[number]
+export { WEB_SOCKET_MESSAGE_TYPES, type WebSocketMessageType } from './websocket-message.js'
 
 export interface BroadcastWebSocketServer extends WebSocketServer {
   broadcast(message: unknown): void
@@ -45,8 +44,8 @@ export function attachWebSocketServer(
       }, PEER_RECONNECT_DELAY_MS)
     })
 
-    socket.on('error', () => {
-      console.info(`Peer connection error: ${peer}`)
+    socket.on('error', (error) => {
+      console.error('Peer connection error:', peer, error)
     })
   }
 
@@ -59,15 +58,14 @@ export function attachWebSocketServer(
     console.info('WebSocket client connected')
 
     socket.on('message', (data) => {
-      try {
-        const message = JSON.parse(data.toString()) as {
-          type?: WebSocketMessageType
-        }
+      const result = parseWebSocketMessage(data.toString())
 
-        console.info(`WebSocket message received: ${message.type}`)
-      } catch {
-        console.info('Invalid WebSocket message')
+      if (!result.ok) {
+        console.warn(`Invalid WebSocket message: ${result.reason}`)
+        return
       }
+
+      console.info(`WebSocket message received: ${result.message.type}`)
     })
 
     socket.on('close', () => {
