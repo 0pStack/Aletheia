@@ -4,7 +4,7 @@ import { signAccessEvent } from '../chain/access-event-signing.js'
 import { Blockchain } from '../chain/blockchain.js'
 import { generateKeyPair } from '../chain/keypair.js'
 import { verifyMerkleProof } from '../chain/merkle.js'
-import { findEventProof } from './verify.js'
+import { locateEvent, proveEvent } from './verify.js'
 
 const keyPair = generateKeyPair()
 
@@ -30,46 +30,63 @@ function chainWith(...blocks: AccessEvent[][]): Blockchain {
   return blockchain
 }
 
-describe('findEventProof', () => {
-  it('returns a proof that rebuilds the root of the block holding the event', () => {
-    const events = ['a', 'b', 'c'].map((id) => makeEvent(id))
-    const blockchain = chainWith(events)
-    const block = blockchain.getLatestBlock()
+function proofFor(blockchain: Blockchain, eventId: string) {
+  const located = locateEvent(blockchain, eventId)
+  if (located.status !== 'found') throw new Error(`expected ${eventId} on the chain`)
+  return proveEvent(blockchain, located)
+}
 
-    const result = findEventProof(blockchain, 'b')
+describe('locateEvent', () => {
+  it('finds the block holding the event and names its patient', () => {
+    const blockchain = chainWith([makeEvent('a')], [makeEvent('b', 3)], [makeEvent('c')])
 
-    expect(result.status).toBe('found')
-    if (result.status !== 'found') return
-    expect(result.patientId).toBe(1)
-    expect(result.proof).toMatchObject({
-      eventId: 'b',
-      blockIndex: block.index,
-      blockHash: block.hash,
-      merkleRoot: block.merkleRoot,
-      isValid: true,
-    })
-    expect(verifyMerkleProof(events[1] as AccessEvent, result.proof.proof, block.merkleRoot)).toBe(
-      true,
-    )
+    const located = locateEvent(blockchain, 'b')
+
+    expect(located).toMatchObject({ status: 'found', patientId: 3, block: { index: 2 } })
   })
 
-  it('finds an event in an earlier block', () => {
-    const blockchain = chainWith([makeEvent('a')], [makeEvent('b')], [makeEvent('c')])
+  it('does not validate anything, so a stranger learns nothing from how long it takes', () => {
+    const blockchain = chainWith([makeEvent('a', 2)])
+    const block = blockchain.getLatestBlock()
+    block.hash = 'f'.repeat(64)
 
-    const result = findEventProof(blockchain, 'a')
-
-    expect(result.status === 'found' && result.proof.blockIndex).toBe(1)
+    expect(locateEvent(blockchain, 'a')).toMatchObject({ status: 'found', patientId: 2 })
   })
 
   it('reports an event still waiting for its block as pending', () => {
     const blockchain = new Blockchain({ batchSize: 5 })
     blockchain.addEvent(makeEvent('queued', 7))
 
-    expect(findEventProof(blockchain, 'queued')).toEqual({ status: 'pending', patientId: 7 })
+    expect(locateEvent(blockchain, 'queued')).toEqual({ status: 'pending', patientId: 7 })
   })
 
   it('reports an unknown event as missing', () => {
-    expect(findEventProof(chainWith([makeEvent('a')]), 'nope')).toEqual({ status: 'missing' })
+    expect(locateEvent(chainWith([makeEvent('a')]), 'nope')).toEqual({ status: 'missing' })
+  })
+})
+
+describe('proveEvent', () => {
+  it('returns a proof that rebuilds the root of the block holding the event', () => {
+    const events = ['a', 'b', 'c'].map((id) => makeEvent(id))
+    const blockchain = chainWith(events)
+    const block = blockchain.getLatestBlock()
+
+    const proof = proofFor(blockchain, 'b')
+
+    expect(proof).toMatchObject({
+      eventId: 'b',
+      blockIndex: block.index,
+      blockHash: block.hash,
+      merkleRoot: block.merkleRoot,
+      isValid: true,
+    })
+    expect(verifyMerkleProof(events[1] as AccessEvent, proof.proof, block.merkleRoot)).toBe(true)
+  })
+
+  it('proves an event in an earlier block', () => {
+    const blockchain = chainWith([makeEvent('a')], [makeEvent('b')], [makeEvent('c')])
+
+    expect(proofFor(blockchain, 'a')).toMatchObject({ blockIndex: 1, isValid: true })
   })
 
   describe('marks the proof invalid', () => {
@@ -80,9 +97,7 @@ describe('findEventProof', () => {
         event.id === 'b' ? { ...event, action: 'WRITE' } : event,
       )
 
-      const result = findEventProof(blockchain, 'b')
-
-      expect(result.status === 'found' && result.proof.isValid).toBe(false)
+      expect(proofFor(blockchain, 'b').isValid).toBe(false)
     })
 
     it('when an earlier block has been tampered with', () => {
@@ -90,9 +105,7 @@ describe('findEventProof', () => {
       const first = blockchain.chain[1]
       if (first) first.data = [{ ...(first.data[0] as AccessEvent), userId: 99 }]
 
-      const result = findEventProof(blockchain, 'b')
-
-      expect(result.status === 'found' && result.proof.isValid).toBe(false)
+      expect(proofFor(blockchain, 'b').isValid).toBe(false)
     })
   })
 
@@ -101,8 +114,6 @@ describe('findEventProof', () => {
     const later = blockchain.chain[2]
     if (later) later.hash = 'f'.repeat(64)
 
-    const result = findEventProof(blockchain, 'a')
-
-    expect(result.status === 'found' && result.proof.isValid).toBe(true)
+    expect(proofFor(blockchain, 'a').isValid).toBe(true)
   })
 })

@@ -10,6 +10,7 @@ import { createApp } from '../app.js'
 import { hashPassword } from '../auth/auth.js'
 import { Blockchain } from '../chain/blockchain.js'
 import { generateKeyPair } from '../chain/keypair.js'
+import { VERIFY_REQUEST_LIMIT } from './verify.routes.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
@@ -144,6 +145,20 @@ describe('GET /api/verify/:eventId', () => {
 
     expect(res.status).toBe(409)
     expect(res.body.error.code).toBe('PENDING')
+  })
+
+  it('answers 429 once one user has asked too often', async () => {
+    const limitedApp = createApp({ db, blockchain: new Blockchain(), keyPair: generateKeyPair() })
+    const doctor = await loginAs('doctor_dr_house', limitedApp)
+    const eventId = randomUUID()
+
+    for (let i = 0; i < VERIFY_REQUEST_LIMIT; i++) {
+      await doctor.get(`/api/verify/${eventId}`)
+    }
+    const res = await doctor.get(`/api/verify/${eventId}`)
+
+    expect(res.status).toBe(429)
+    expect(res.body.error.code).toBe('RATE_LIMITED')
   })
 
   it('refuses an unauthorized user', async () => {
