@@ -10,6 +10,7 @@ import { db as defaultDb } from './db.js'
 import { ok } from './envelope.js'
 import { createNotesRouter } from './notes/notes.routes.js'
 import { createPatientsRouter } from './patients/patients.routes.js'
+import { createVerifyRouter } from './verify/verify.routes.js'
 
 // Express answers an unhandled throw with an HTML page carrying the stack. Every client
 // here parses the envelope, and the underlying message may name database internals, so
@@ -82,6 +83,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use('/api/patients', createNotesRouter(db, blockchain, options.keyPair))
   app.use('/api/patients', createAccessLogRouter(db, blockchain, options.keyPair))
   app.use('/api/patients', createPatientsRouter(db, blockchain, options.keyPair))
+  app.use('/api/verify', createVerifyRouter(blockchain))
 
   // Last, so it sees anything the routes above throw.
   app.use(envelopeErrors)
