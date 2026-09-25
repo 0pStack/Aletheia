@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Blockchain } from './blockchain.js'
+import type { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
 import { signAccessEvent } from './access-event-signing.js'
 import { generateKeyPair } from './keypair.js'
@@ -117,6 +118,17 @@ describe('Blockchain', () => {
     blockchain.addBlock([testEvent])
 
     expect(saves).toEqual([2, 3])
+  })
+
+  it('calls onNewBlock with the newly added block', () => {
+    const blocks: Block[] = []
+    const blockchain = new Blockchain({
+      onNewBlock: (block) => blocks.push(block),
+    })
+
+    const addedBlock = blockchain.addBlock([testEvent])
+
+    expect(blocks).toEqual([addedBlock])
   })
 
   it('rejects a block containing an event with a forged signature', () => {

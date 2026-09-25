@@ -5,11 +5,28 @@ export const WEB_SOCKET_MESSAGE_TYPES = ['NEW_BLOCK', 'CHAIN_REQUEST', 'CHAIN_RE
 
 export type WebSocketMessageType = (typeof WEB_SOCKET_MESSAGE_TYPES)[number]
 
+export interface BroadcastWebSocketServer extends WebSocketServer {
+  broadcast(message: unknown): void
+}
+
 const PEER_RECONNECT_DELAY_MS = 1000
 
-export function attachWebSocketServer(server: Server, peers: string[] = []): WebSocketServer {
+export function attachWebSocketServer(
+  server: Server,
+  peers: string[] = [],
+): BroadcastWebSocketServer {
   const sockets = new Set<WebSocket>()
-  const webSocketServer = new WebSocketServer({ server })
+  const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
+
+  webSocketServer.broadcast = (message: unknown): void => {
+    const payload = JSON.stringify(message)
+
+    for (const socket of sockets) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(payload)
+      }
+    }
+  }
 
   const connectToPeer = (peer: string): void => {
     const socket = new WebSocket(peer)

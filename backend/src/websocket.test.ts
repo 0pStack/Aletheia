@@ -186,4 +186,54 @@ describe('attachWebSocketServer', () => {
     webSocketServer.close()
     server.close()
   })
+
+  it('broadcasts a NEW_BLOCK message to connected peers', async () => {
+    const server = createServer()
+    const webSocketServer = attachWebSocketServer(server)
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    const block = {
+      index: 1,
+      hash: 'test-hash',
+    }
+
+    const messageReceived = new Promise<string>((resolve) => {
+      socket.once('message', (data) => resolve(data.toString()))
+    })
+
+    webSocketServer.broadcast({
+      type: 'NEW_BLOCK',
+      block,
+    })
+
+    const message = JSON.parse(await messageReceived)
+
+    expect(message).toEqual({
+      type: 'NEW_BLOCK',
+      block,
+    })
+
+    socket.close()
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve())
+    })
+
+    webSocketServer.close()
+    server.close()
+  })
 })

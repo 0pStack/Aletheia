@@ -17,11 +17,20 @@ console.info(`Configured peers: ${peers.length}`)
 const chainPath = `./data/chain-${port}.json`
 const savedChain = loadChain(chainPath)
 
+const server = createServer()
+const webSocketServer = attachWebSocketServer(server, peers)
+
 const blockchain = new Blockchain({
   batchSize: 5,
   flushIntervalMs: 2000,
   chain: savedChain,
   onBlockAdded: (chain) => saveChain(chainPath, chain),
+  onNewBlock: (block) => {
+    webSocketServer.broadcast({
+      type: 'NEW_BLOCK',
+      block,
+    })
+  },
 })
 
 if (!savedChain) {
@@ -34,8 +43,7 @@ if (!savedChain) {
   )
 }
 const app = createApp({ blockchain, keyPair })
-const server = createServer(app)
-attachWebSocketServer(server, peers)
+server.on('request', app)
 
 server.listen(port, () => {
   console.info(`Backend listening on http://localhost:${port}`)
