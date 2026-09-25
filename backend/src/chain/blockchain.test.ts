@@ -232,3 +232,83 @@ describe('Blockchain batching', () => {
     expect(() => new Blockchain({ batchSize: 0 })).toThrow()
   })
 })
+
+describe('replaceChain', () => {
+  function chainOfLength(length: number): Block[] {
+    const blockchain = new Blockchain()
+    for (let i = 1; i < length; i++) {
+      blockchain.addBlock([signedTestEvent({ ...testEvent, id: `peer-event-${i}` })])
+    }
+    return blockchain.chain
+  }
+
+  it('replaces our chain with a longer valid one', () => {
+    const blockchain = new Blockchain()
+    const incoming = chainOfLength(3)
+
+    expect(blockchain.replaceChain(incoming)).toBe(true)
+    expect(blockchain.chain.map((block) => block.hash)).toEqual(incoming.map((block) => block.hash))
+    expect(blockchain.isChainValid()).toBe(true)
+  })
+
+  it('keeps our chain when the incoming one is shorter', () => {
+    const blockchain = new Blockchain({ chain: chainOfLength(3) })
+    const ourHashes = blockchain.chain.map((block) => block.hash)
+
+    expect(blockchain.replaceChain(chainOfLength(2))).toBe(false)
+    expect(blockchain.chain.map((block) => block.hash)).toEqual(ourHashes)
+  })
+
+  it('keeps our chain when the incoming one is the same length', () => {
+    const blockchain = new Blockchain({ chain: chainOfLength(2) })
+
+    expect(blockchain.replaceChain(chainOfLength(2))).toBe(false)
+  })
+
+  it('keeps our chain when the longer incoming one is invalid', () => {
+    const blockchain = new Blockchain()
+    const incoming = chainOfLength(3)
+    const tamperedEvent = incoming[1]?.data[0]
+    if (!tamperedEvent) throw new Error('expected an event in block 1')
+    tamperedEvent.action = 'WRITE'
+
+    expect(blockchain.replaceChain(incoming)).toBe(false)
+    expect(blockchain.chain).toHaveLength(1)
+  })
+
+  it('saves the new chain but does not broadcast it', () => {
+    const saves: number[] = []
+    const broadcasts: Block[] = []
+    const blockchain = new Blockchain({
+      onBlockAdded: (chain) => saves.push(chain.length),
+      onNewBlock: (block) => broadcasts.push(block),
+    })
+
+    blockchain.replaceChain(chainOfLength(3))
+
+    expect(saves).toEqual([3])
+    expect(broadcasts).toEqual([])
+  })
+
+  it('does not save when the chain is rejected', () => {
+    const saves: number[] = []
+    const blockchain = new Blockchain({ onBlockAdded: (chain) => saves.push(chain.length) })
+
+    blockchain.replaceChain([])
+
+    expect(saves).toEqual([])
+  })
+
+  it('adds pending events on top of the new chain', () => {
+    const blockchain = new Blockchain({ batchSize: 5 })
+    blockchain.addEvent(signedTestEvent({ ...testEvent, id: 'waiting' }))
+    const incoming = chainOfLength(3)
+
+    blockchain.replaceChain(incoming)
+    const block = blockchain.flush()
+
+    expect(block?.previousHash).toBe(incoming[2]?.hash)
+    expect(block?.data.map((event) => event.id)).toEqual(['waiting'])
+    expect(blockchain.isChainValid()).toBe(true)
+  })
+})
