@@ -71,6 +71,25 @@ export class Blockchain {
     return newBlock
   }
 
+  acceptBlock(block: Block): boolean {
+    const latestBlock = this.getLatestBlock()
+
+    if (block.index !== latestBlock.index + 1) {
+      return false
+    }
+
+    const candidateChain = [...this.chain, block]
+
+    if (findFirstInvalidBlockIndex(candidateChain) !== null) {
+      return false
+    }
+
+    this.chain.push(block)
+    this.onBlockAdded?.(this.chain)
+
+    return true
+  }
+
   addEvent(event: AccessEvent): void {
     this.pending.push(event)
 
