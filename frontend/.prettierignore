@@ -4,3 +4,4 @@ public/mockServiceWorker.js
 package-lock.json
 .claude-flow
 public/draco
+coverage

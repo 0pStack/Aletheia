@@ -75,6 +75,7 @@ The server listens on http://localhost:3001 (set `PORT` to change it). `GET /api
 | --------------------------------- | ----------------------------------------------------------------- |
 | `npm run dev`                     | Start with reload on save (`tsx watch`)                           |
 | `npm test`                        | Run the Vitest tests once (`npm run test:watch` to keep watching) |
+| `npm run test:coverage`           | Run the tests with coverage; fails below the thresholds           |
 | `npm run lint`                    | ESLint                                                            |
 | `npm run typecheck`               | TypeScript check without building                                 |
 | `npm run format` / `format:check` | Prettier                                                          |
