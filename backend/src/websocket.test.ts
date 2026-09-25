@@ -152,6 +152,7 @@ describe('attachWebSocketServer', () => {
     const server = createServer()
     const webSocketServer = attachWebSocketServer(server)
     const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
@@ -173,7 +174,7 @@ describe('attachWebSocketServer', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 20))
 
-    expect(consoleInfo).toHaveBeenCalledWith('Invalid WebSocket message')
+    expect(consoleWarn).toHaveBeenCalledWith('Invalid WebSocket message: invalid JSON')
 
     expect(socket.readyState).toBe(WebSocket.OPEN)
 
@@ -183,6 +184,7 @@ describe('attachWebSocketServer', () => {
     })
 
     consoleInfo.mockRestore()
+    consoleWarn.mockRestore()
     webSocketServer.close()
     server.close()
   })
@@ -233,6 +235,94 @@ describe('attachWebSocketServer', () => {
       socket.once('close', () => resolve())
     })
 
+    webSocketServer.close()
+    server.close()
+  })
+
+  it('logs the actual error when a peer connection fails', async () => {
+    const server = createServer()
+    const unusedServer = new WebSocketServer({ port: 0 })
+
+    await new Promise<void>((resolve) => {
+      unusedServer.once('listening', () => resolve())
+    })
+
+    const address = unusedServer.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine unused port')
+    }
+
+    await new Promise<void>((resolve) => {
+      unusedServer.close(() => resolve())
+    })
+
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+    const peerUrl = `ws://localhost:${address.port}`
+    const webSocketServer = attachWebSocketServer(server, [peerUrl])
+
+    await vi.waitFor(() => {
+      expect(consoleError).toHaveBeenCalledWith(
+        'Peer connection error:',
+        peerUrl,
+        expect.any(Error),
+      )
+    })
+
+    consoleError.mockRestore()
+    consoleInfo.mockRestore()
+    webSocketServer.close()
+    server.close()
+  })
+
+  it.each([
+    ['an unknown type', { type: 'DROP_TABLES' }, 'unknown type'],
+    [
+      'a wrong-shape NEW_BLOCK',
+      { type: 'NEW_BLOCK', block: { index: 'x' } },
+      'malformed NEW_BLOCK',
+    ],
+  ])('rejects %s without processing it', async (_label, payload, reason) => {
+    const server = createServer()
+    const webSocketServer = attachWebSocketServer(server)
+    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    socket.send(JSON.stringify(payload))
+
+    await vi.waitFor(() => {
+      expect(consoleWarn).toHaveBeenCalledWith(`Invalid WebSocket message: ${reason}`)
+    })
+
+    expect(consoleInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('WebSocket message received'),
+    )
+    expect(socket.readyState).toBe(WebSocket.OPEN)
+
+    socket.close()
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve())
+    })
+
+    consoleInfo.mockRestore()
+    consoleWarn.mockRestore()
     webSocketServer.close()
     server.close()
   })
