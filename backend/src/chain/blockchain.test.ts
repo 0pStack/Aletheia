@@ -46,6 +46,42 @@ describe('Blockchain', () => {
     expect(blockchain.isChainValid()).toBe(false)
   })
 
+  it('returns null when every block is valid', () => {
+    const blockchain = new Blockchain()
+    blockchain.addBlock([signedTestEvent(testEvent)])
+
+    expect(blockchain.findFirstInvalidBlockIndex()).toBeNull()
+  })
+
+  it('returns the chain position of the first invalid block, not its stored index', () => {
+    const blockchain = new Blockchain()
+    blockchain.addBlock([signedTestEvent(testEvent)])
+
+    const block = blockchain.chain[1]
+    if (!block) throw new Error('expected a block at chain position one')
+    block.index = 42
+    block.hash = block.calculateHash()
+
+    expect(blockchain.isChainValid()).toBe(true)
+
+    block.hash = 'tampered'
+
+    expect(blockchain.findFirstInvalidBlockIndex()).toBe(1)
+  })
+
+  it('returns the earliest invalid block when later links also fail', () => {
+    const blockchain = new Blockchain()
+    blockchain.addBlock([signedTestEvent(testEvent)])
+    blockchain.addBlock([signedTestEvent({ ...testEvent, id: 'event-2' })])
+    blockchain.addBlock([signedTestEvent({ ...testEvent, id: 'event-3' })])
+
+    const tamperedEvent = blockchain.chain[1]?.data[0]
+    if (!tamperedEvent) throw new Error('expected the added block to hold one event')
+    tamperedEvent.action = 'WRITE'
+
+    expect(blockchain.findFirstInvalidBlockIndex()).toBe(1)
+  })
+
   it('rejects a block whose Merkle root does not match its events', () => {
     const blockchain = new Blockchain()
     const block = blockchain.addBlock([signedTestEvent(testEvent)])
