@@ -1,6 +1,6 @@
 import { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
-import { findFirstInvalidBlockIndex } from './chain-validation.js'
+import { findFirstInvalidBlockIndex, isValidIncomingChain } from './chain-validation.js'
 
 export interface BlockchainOptions {
   batchSize?: number
@@ -137,6 +137,23 @@ export class Blockchain {
       clearTimeout(this.flushTimer)
       this.flushTimer = undefined
     }
+  }
+
+  replaceChain(incoming: Block[]): boolean {
+    const ourGenesis = this.chain[0]
+
+    if (!ourGenesis || incoming.length <= this.chain.length) {
+      return false
+    }
+
+    if (!isValidIncomingChain(incoming, ourGenesis)) {
+      return false
+    }
+
+    this.chain = [...incoming]
+    this.onBlockAdded?.(this.chain)
+
+    return true
   }
 
   findFirstInvalidBlockIndex(): number | null {
