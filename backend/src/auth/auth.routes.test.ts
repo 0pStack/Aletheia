@@ -7,6 +7,7 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { generateKeyPair } from '../chain/keypair.js'
+import { LOGIN_ATTEMPT_LIMIT } from './auth.routes.js'
 import { hashPassword } from './auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -203,5 +204,94 @@ describe('POST /api/auth/logout', () => {
 
     expect(res.status).toBe(401)
     expect(res.body.error.code).toBe('UNAUTHENTICATED')
+  })
+})
+
+describe('login rate limiting', () => {
+  // A fresh app per test, so the attempts above and in other tests do not count here.
+  const freshApp = (): Express => createApp({ db, keyPair: generateKeyPair() })
+
+  it('refuses further attempts after too many failed logins, even with the right password', async () => {
+    const limitedApp = freshApp()
+
+    for (let attempt = 0; attempt < LOGIN_ATTEMPT_LIMIT; attempt++) {
+      const res = await request(limitedApp)
+        .post('/api/auth/login')
+        .send({ username: 'doctor_dr_house', password: 'wrong-password' })
+      expect(res.status).toBe(401)
+    }
+
+    const res = await request(limitedApp)
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+
+    expect(res.status).toBe(429)
+    expect(res.body).toEqual({
+      success: false,
+      data: null,
+      error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Try again later.' },
+    })
+  })
+
+  it('does not count successful logins against the limit', async () => {
+    const limitedApp = freshApp()
+
+    for (let attempt = 0; attempt <= LOGIN_ATTEMPT_LIMIT; attempt++) {
+      const res = await request(limitedApp)
+        .post('/api/auth/login')
+        .send({ username: 'doctor_dr_house', password: PASSWORD })
+      expect(res.status).toBe(200)
+    }
+  })
+
+  it('counts attempts per username, so one account being guessed does not lock out another', async () => {
+    const limitedApp = freshApp()
+
+    for (let attempt = 0; attempt < LOGIN_ATTEMPT_LIMIT; attempt++) {
+      await request(limitedApp)
+        .post('/api/auth/login')
+        .send({ username: 'doctor_dr_house', password: 'wrong-password' })
+    }
+
+    const res = await request(limitedApp)
+      .post('/api/auth/login')
+      .send({ username: 'patient_anna', password: PASSWORD })
+
+    expect(res.status).toBe(200)
+  })
+
+  it('does not count malformed requests, only wrong passwords', async () => {
+    const limitedApp = freshApp()
+
+    for (let attempt = 0; attempt <= LOGIN_ATTEMPT_LIMIT; attempt++) {
+      await request(limitedApp).post('/api/auth/login').send({ username: 'doctor_dr_house' })
+    }
+
+    const res = await request(limitedApp)
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+
+    expect(res.status).toBe(200)
+  })
+})
+
+describe('session fixation', () => {
+  it('issues a new session id on login instead of reusing the old one', async () => {
+    const agent = request.agent(app)
+    const sessionId = (res: request.Response): string | undefined =>
+      (res.headers['set-cookie'] as unknown as string[] | undefined)
+        ?.find((cookie) => cookie.startsWith('connect.sid='))
+        ?.split(';')[0]
+
+    const first = await agent
+      .post('/api/auth/login')
+      .send({ username: 'patient_anna', password: PASSWORD })
+    const second = await agent
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+
+    expect(sessionId(first)).toBeDefined()
+    expect(sessionId(second)).toBeDefined()
+    expect(sessionId(second)).not.toBe(sessionId(first))
   })
 })
