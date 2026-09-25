@@ -195,7 +195,7 @@ Almost everything else depends on this phase, so it comes first. Most of it is a
 
 ### #22 Merkle tree and root in the block header
 **Needs:** #9.
-- Build a Merkle tree from sha256 hashes of the events (if a level has an odd count, duplicate the last hash). Store `merkleRoot` on the block and include it in the block hash.
+- Build a Merkle tree from sha256 hashes of the events, with RFC 6962 domain separation (leaf `0x00`, node `0x01`) and an odd last node promoted rather than duplicated (#138). Store `merkleRoot` on the block and include it in the block hash.
 - Batch events into blocks, for example every N events or every few seconds.
 - `isChainValid` also recomputes the root.
 
