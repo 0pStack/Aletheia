@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:seed": "tsx db/seed.ts",
@@ -21,6 +22,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "dependencies": {
     "better-sqlite3": "~12.11.1",
     "express": "^5.2.1",
@@ -36,6 +40,7 @@
     "@types/node": "^26.5.1",
     "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "5.0.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
