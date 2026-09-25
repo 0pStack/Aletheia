@@ -140,6 +140,17 @@ describe('Blockchain', () => {
     expect(blockchain.isChainValid()).toBe(false)
   })
 
+  it('accepts a valid incoming block from a peer', () => {
+    const peer = new Blockchain()
+    const incomingBlock = peer.addBlock([signedTestEvent(testEvent)])
+
+    const blockchain = new Blockchain()
+
+    expect(blockchain.acceptBlock(incomingBlock)).toBe(true)
+    expect(blockchain.getLatestBlock()).toBe(incomingBlock)
+    expect(blockchain.chain).toHaveLength(2)
+  })
+
   it('keeps an empty genesis block valid', () => {
     expect(new Blockchain().isChainValid()).toBe(true)
   })
