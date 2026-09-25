@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Blockchain } from './blockchain.js'
+import type { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
 import { signAccessEvent } from './access-event-signing.js'
 import { generateKeyPair } from './keypair.js'
@@ -120,7 +121,7 @@ describe('Blockchain', () => {
   })
 
   it('calls onNewBlock with the newly added block', () => {
-    const blocks = []
+    const blocks: Block[] = []
     const blockchain = new Blockchain({
       onNewBlock: (block) => blocks.push(block),
     })
