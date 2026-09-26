@@ -19,7 +19,11 @@ const chainPath = `./data/chain-${port}.json`
 const savedChain = loadChain(chainPath)
 
 const server = createServer()
-const webSocketServer = attachWebSocketServer(server, peers)
+const webSocketServer = attachWebSocketServer(server, peers, (block) => {
+  if (!blockchain.acceptBlock(block)) {
+    console.warn(`Rejected invalid incoming block: ${block.index}`)
+  }
+})
 
 const blockchain = new Blockchain({
   batchSize: 5,
