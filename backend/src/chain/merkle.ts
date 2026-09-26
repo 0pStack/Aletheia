@@ -8,12 +8,20 @@ export function sha256(value: string): string {
 
 export const EMPTY_MERKLE_ROOT = sha256('')
 
+// RFC 6962 domain separation: the prefix byte keeps an inner node from ever passing as a leaf.
+const LEAF_PREFIX = Buffer.from([0x00])
+const NODE_PREFIX = Buffer.from([0x01])
+
 export function hashLeaf(event: AccessEvent): string {
-  return sha256(stableStringify(event))
+  return createHash('sha256').update(LEAF_PREFIX).update(stableStringify(event)).digest('hex')
 }
 
-export function hashPair(left: string, right: string): string {
-  return sha256(left + right)
+export function hashNode(left: string, right: string): string {
+  return createHash('sha256')
+    .update(NODE_PREFIX)
+    .update(Buffer.from(left, 'hex'))
+    .update(Buffer.from(right, 'hex'))
+    .digest('hex')
 }
 
 export function buildMerkleLevels(leaves: string[]): string[][] {
@@ -29,8 +37,9 @@ export function buildMerkleLevels(leaves: string[]): string[][] {
 
     for (let i = 0; i < current.length; i += 2) {
       const left = current[i] as string
-      const right = current[i + 1] ?? left
-      next.push(hashPair(left, right))
+      const right = current[i + 1]
+      // An odd last node is promoted, not paired with itself, so [a, b, c] and [a, b, c, c] differ.
+      next.push(right === undefined ? left : hashNode(left, right))
     }
 
     levels.push(next)
@@ -62,26 +71,28 @@ export function getMerkleProof(leaves: string[], leaf: string): MerkleProofStep[
 
   for (const level of buildMerkleLevels(leaves).slice(0, -1)) {
     const isRight = index % 2 === 1
-    const siblingIndex = isRight ? index - 1 : index + 1
-    // An odd last node was paired with itself when the level above was built.
-    const sibling = level[siblingIndex] ?? (level[index] as string)
+    const sibling = level[isRight ? index - 1 : index + 1]
 
-    proof.push({ hash: sibling, position: isRight ? 'left' : 'right' })
+    // No sibling means this node was promoted, so the level adds nothing to the proof.
+    if (sibling !== undefined) {
+      proof.push({ hash: sibling, position: isRight ? 'left' : 'right' })
+    }
     index = Math.floor(index / 2)
   }
 
   return proof
 }
 
+// Takes the event, not its hash, so a caller cannot start the walk from an arbitrary node.
 export function verifyMerkleProof(
-  leaf: string,
+  event: AccessEvent,
   proof: readonly MerkleProofStep[],
   root: string,
 ): boolean {
   const computed = proof.reduce(
     (hash, step) =>
-      step.position === 'left' ? hashPair(step.hash, hash) : hashPair(hash, step.hash),
-    leaf,
+      step.position === 'left' ? hashNode(step.hash, hash) : hashNode(hash, step.hash),
+    hashLeaf(event),
   )
 
   return computed === root
