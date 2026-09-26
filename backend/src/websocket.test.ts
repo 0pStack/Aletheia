@@ -239,6 +239,54 @@ describe('attachWebSocketServer', () => {
     server.close()
   })
 
+  it('passes a received NEW_BLOCK to the handler', async () => {
+    const server = createServer()
+    const onNewBlock = vi.fn()
+    const webSocketServer = attachWebSocketServer(server, [], onNewBlock)
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    const block = {
+      index: 1,
+      timestamp: '2026-09-25T10:00:00.000Z',
+      data: [],
+      previousHash: 'abc',
+      merkleRoot: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      hash: 'test-hash',
+      nonce: 0,
+    }
+
+    socket.send(JSON.stringify({ type: 'NEW_BLOCK', block }))
+
+    await vi.waitFor(() => {
+      expect(onNewBlock).toHaveBeenCalledOnce()
+    })
+
+    expect(onNewBlock.mock.calls[0]?.[0]).toMatchObject(block)
+
+    socket.close()
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve())
+    })
+
+    webSocketServer.close()
+    server.close()
+  })
+
   it('logs the actual error when a peer connection fails', async () => {
     const server = createServer()
     const unusedServer = new WebSocketServer({ port: 0 })
