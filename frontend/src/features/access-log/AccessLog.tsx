@@ -2,6 +2,7 @@ import type { AccessLogAction } from '../../api/schemas'
 import { ROLE_LABELS } from '../../shared/roleLabels'
 import { Button } from '../../shared/ui/Button/Button'
 import { useAccessLog } from './useAccessLog'
+import { VerificationBadge } from './VerificationBadge'
 import styles from './AccessLog.module.css'
 
 // The chain speaks in verbs; a person reading their own record should not have to.
@@ -37,8 +38,8 @@ export function AccessLog({ patientId }: AccessLogProps) {
     return <p className={styles.empty}>No one has opened this record yet.</p>
   }
 
-  // A timeline rather than a table: it reads as a record kept over time, and each entry
-  // has room for the verification badge that comes with #43.
+  // A timeline rather than a table: it reads as a record kept over time, with room on
+  // each entry for its verification badge.
   return (
     <ol className={styles.timeline} aria-label="Access log">
       {log.data.map((entry) => (
@@ -58,6 +59,7 @@ export function AccessLog({ patientId }: AccessLogProps) {
               chain, not in a table someone could quietly edit. */}
           <p className={styles.origin}>
             Recorded by {entry.serverId}, block #{entry.blockIndex}
+            <VerificationBadge eventId={entry.eventId} />
           </p>
         </li>
       ))}
