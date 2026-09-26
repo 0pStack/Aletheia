@@ -69,3 +69,18 @@ export const accessLogEntrySchema = z.object({
   blockIndex: z.number(),
 })
 export type AccessLogEntry = z.infer<typeof accessLogEntrySchema>
+
+export const merkleProofStepSchema = z.object({
+  hash: z.string(),
+  position: z.enum(['left', 'right']),
+})
+
+export const eventProofSchema = z.object({
+  eventId: z.string(),
+  blockIndex: z.number(),
+  blockHash: z.string(),
+  merkleRoot: z.string(),
+  proof: z.array(merkleProofStepSchema),
+  isValid: z.boolean(),
+})
+export type EventProof = z.infer<typeof eventProofSchema>
