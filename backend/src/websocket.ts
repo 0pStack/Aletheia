@@ -30,8 +30,22 @@ export function attachWebSocketServer(
 ): BroadcastWebSocketServer {
   const sockets = new Set<WebSocket>()
   const peerSockets = new Set<WebSocket>()
+  const awaitingChain = new WeakSet<WebSocket>()
   const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
   let closed = false
+
+  // Event signatures are checked against the key inside the event, so a made-up chain
+  // validates. Only a configured peer we asked may replace our chain.
+  const requestChain = (socket: WebSocket): void => {
+    awaitingChain.add(socket)
+    send(socket, { type: 'CHAIN_REQUEST' })
+  }
+
+  const requestChainFromPeers = (): void => {
+    for (const socket of peerSockets) {
+      requestChain(socket)
+    }
+  }
 
   webSocketServer.broadcast = (message: unknown): void => {
     const payload = JSON.stringify(message)
@@ -56,7 +70,7 @@ export function attachWebSocketServer(
 
     switch (message.type) {
       case 'NEW_BLOCK':
-        handlers.onNewBlock?.(message.block, () => send(socket, { type: 'CHAIN_REQUEST' }))
+        handlers.onNewBlock?.(message.block, requestChainFromPeers)
         return
       case 'CHAIN_REQUEST':
         if (handlers.getChain) {
@@ -64,6 +78,10 @@ export function attachWebSocketServer(
         }
         return
       case 'CHAIN_RESPONSE':
+        if (!awaitingChain.delete(socket)) {
+          console.warn('Ignored a CHAIN_RESPONSE that was not requested')
+          return
+        }
         handlers.onChain?.(message.chain)
         return
     }
@@ -76,7 +94,7 @@ export function attachWebSocketServer(
 
     socket.on('open', () => {
       console.info(`Connected to peer: ${peer}`)
-      send(socket, { type: 'CHAIN_REQUEST' })
+      requestChain(socket)
     })
 
     socket.on('message', (data) => handleMessage(socket, data))

@@ -325,6 +325,55 @@ describe('attachWebSocketServer', () => {
     server.close()
   })
 
+  it.each([
+    ['without asking first', false],
+    ['after sending a NEW_BLOCK that is far ahead', true],
+  ])(
+    'ignores a CHAIN_RESPONSE from a client that connected in %s',
+    async (_label, sendsNewBlockFirst) => {
+      const server = createServer()
+      const onChain = vi.fn()
+      const onNewBlock = vi.fn((_block: Block, requestChain: () => void) => requestChain())
+      const webSocketServer = attachWebSocketServer(server, [], { onChain, onNewBlock })
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+      const forged = new Blockchain()
+      forged.addBlock([])
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, () => resolve())
+      })
+
+      const address = server.address()
+
+      if (!address || typeof address === 'string') {
+        throw new Error('Could not determine server port')
+      }
+
+      const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+      await new Promise<void>((resolve) => {
+        socket.once('open', () => resolve())
+      })
+
+      if (sendsNewBlockFirst) {
+        socket.send(JSON.stringify({ type: 'NEW_BLOCK', block: forged.getLatestBlock() }))
+      }
+      socket.send(JSON.stringify({ type: 'CHAIN_RESPONSE', chain: forged.chain }))
+
+      await vi.waitFor(() => {
+        expect(consoleWarn).toHaveBeenCalledWith('Ignored a CHAIN_RESPONSE that was not requested')
+      })
+      expect(onChain).not.toHaveBeenCalled()
+
+      socket.close()
+      consoleWarn.mockRestore()
+      consoleInfo.mockRestore()
+      webSocketServer.close()
+      server.close()
+    },
+  )
+
   it('requests the chain from a peer it connects to and passes the answer on', async () => {
     const server = createServer()
     const peerServer = new WebSocketServer({ port: 0 })
