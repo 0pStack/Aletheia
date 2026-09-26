@@ -485,7 +485,12 @@ export function createLandingScene(
       releaseLoaded(propModels.scene, props.geometries)
       releaseLoaded(blockModels.scene, iceBlock.geometries)
       scene.add(site, ground, ...props.objects, ...iceBlock.objects)
-      onReady()
+      // Built on the first frame, these programs froze the page for about a second (Windows
+      // translates every one to Direct3D). Compiled here instead, off the main thread where the
+      // driver allows it, the first frame only has to draw.
+      return renderer.compileAsync(scene, camera).then(() => {
+        if (!disposed) onReady()
+      })
     })
     .catch((error: unknown) => {
       console.error('Landing scene assets failed to load:', error)
