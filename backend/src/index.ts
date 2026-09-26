@@ -7,6 +7,7 @@ import { resolvePeers } from './config/peers.js'
 import { attachWebSocketServer } from './websocket.js'
 import { Blockchain } from './chain/blockchain.js'
 import { loadChain, saveChain } from './chain/chain-storage.js'
+import { createChainSyncHandlers } from './peer-sync.js'
 
 const keyPair = loadNodeKeyPair()
 const port = resolvePort(process.env.PORT)
@@ -17,13 +18,6 @@ console.info(`Configured peers: ${peers.length}`)
 
 const chainPath = `./data/chain-${port}.json`
 const savedChain = loadChain(chainPath)
-
-const server = createServer()
-const webSocketServer = attachWebSocketServer(server, peers, (block) => {
-  if (!blockchain.acceptBlock(block)) {
-    console.warn(`Rejected invalid incoming block: ${block.index}`)
-  }
-})
 
 const blockchain = new Blockchain({
   batchSize: 5,
@@ -38,6 +32,9 @@ const blockchain = new Blockchain({
     })
   },
 })
+
+const server = createServer()
+const webSocketServer = attachWebSocketServer(server, peers, createChainSyncHandlers(blockchain))
 
 if (!savedChain) {
   console.info(`No saved chain found, starting a new one in ${chainPath}`)

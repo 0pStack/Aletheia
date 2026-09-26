@@ -1,6 +1,8 @@
 import { createServer } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
 import { describe, expect, it, vi } from 'vitest'
+import type { Block } from './chain/block.js'
+import { Blockchain } from './chain/blockchain.js'
 import { attachWebSocketServer } from './websocket.js'
 
 describe('attachWebSocketServer', () => {
@@ -242,7 +244,7 @@ describe('attachWebSocketServer', () => {
   it('passes a received NEW_BLOCK to the handler', async () => {
     const server = createServer()
     const onNewBlock = vi.fn()
-    const webSocketServer = attachWebSocketServer(server, [], onNewBlock)
+    const webSocketServer = attachWebSocketServer(server, [], { onNewBlock })
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
@@ -284,6 +286,185 @@ describe('attachWebSocketServer', () => {
     })
 
     webSocketServer.close()
+    server.close()
+  })
+
+  it('answers a CHAIN_REQUEST with its chain', async () => {
+    const server = createServer()
+    const chain = new Blockchain().chain
+    const webSocketServer = attachWebSocketServer(server, [], { getChain: () => chain })
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    const reply = new Promise<string>((resolve) => {
+      socket.once('message', (data) => resolve(data.toString()))
+    })
+
+    socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
+
+    expect(JSON.parse(await reply)).toEqual(
+      JSON.parse(JSON.stringify({ type: 'CHAIN_RESPONSE', chain })),
+    )
+
+    socket.close()
+    webSocketServer.close()
+    server.close()
+  })
+
+  it.each([
+    ['without asking first', false],
+    ['after sending a NEW_BLOCK that is far ahead', true],
+  ])(
+    'ignores a CHAIN_RESPONSE from a client that connected in %s',
+    async (_label, sendsNewBlockFirst) => {
+      const server = createServer()
+      const onChain = vi.fn()
+      const onNewBlock = vi.fn((_block: Block, requestChain: () => void) => requestChain())
+      const webSocketServer = attachWebSocketServer(server, [], { onChain, onNewBlock })
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+      const forged = new Blockchain()
+      forged.addBlock([])
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, () => resolve())
+      })
+
+      const address = server.address()
+
+      if (!address || typeof address === 'string') {
+        throw new Error('Could not determine server port')
+      }
+
+      const socket = new WebSocket(`ws://localhost:${address.port}`)
+
+      await new Promise<void>((resolve) => {
+        socket.once('open', () => resolve())
+      })
+
+      if (sendsNewBlockFirst) {
+        socket.send(JSON.stringify({ type: 'NEW_BLOCK', block: forged.getLatestBlock() }))
+      }
+      socket.send(JSON.stringify({ type: 'CHAIN_RESPONSE', chain: forged.chain }))
+
+      await vi.waitFor(() => {
+        expect(consoleWarn).toHaveBeenCalledWith('Ignored a CHAIN_RESPONSE that was not requested')
+      })
+      expect(onChain).not.toHaveBeenCalled()
+
+      socket.close()
+      consoleWarn.mockRestore()
+      consoleInfo.mockRestore()
+      webSocketServer.close()
+      server.close()
+    },
+  )
+
+  it('requests the chain from a peer it connects to and passes the answer on', async () => {
+    const server = createServer()
+    const peerServer = new WebSocketServer({ port: 0 })
+    const chain = new Blockchain().chain
+
+    peerServer.on('connection', (socket) => {
+      socket.on('message', (data) => {
+        if (JSON.parse(data.toString()).type === 'CHAIN_REQUEST') {
+          socket.send(JSON.stringify({ type: 'CHAIN_RESPONSE', chain }))
+        }
+      })
+    })
+
+    await new Promise<void>((resolve) => {
+      peerServer.once('listening', () => resolve())
+    })
+
+    const address = peerServer.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine peer server port')
+    }
+
+    const onChain = vi.fn()
+    const webSocketServer = attachWebSocketServer(server, [`ws://localhost:${address.port}`], {
+      onChain,
+    })
+
+    await vi.waitFor(() => {
+      expect(onChain).toHaveBeenCalledOnce()
+    })
+
+    expect(onChain.mock.calls[0]?.[0].map((block: Block) => block.hash)).toEqual(
+      chain.map((block) => block.hash),
+    )
+
+    webSocketServer.close()
+    for (const client of peerServer.clients) {
+      client.terminate()
+    }
+    peerServer.close()
+    server.close()
+  })
+
+  it('stops reconnecting to peers once closed, even while that peer is still connected in', async () => {
+    const server = createServer()
+    const peerServer = new WebSocketServer({ port: 0 })
+
+    await new Promise<void>((resolve) => {
+      peerServer.once('listening', () => resolve())
+    })
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const peerAddress = peerServer.address()
+    const ourAddress = server.address()
+
+    if (
+      !peerAddress ||
+      typeof peerAddress === 'string' ||
+      !ourAddress ||
+      typeof ourAddress === 'string'
+    ) {
+      throw new Error('Could not determine ports')
+    }
+
+    let connections = 0
+    const firstConnection = new Promise<void>((resolve) => {
+      peerServer.on('connection', () => {
+        connections += 1
+        resolve()
+      })
+    })
+
+    const webSocketServer = attachWebSocketServer(server, [`ws://localhost:${peerAddress.port}`])
+    const inboundFromPeer = new WebSocket(`ws://localhost:${ourAddress.port}`)
+
+    await firstConnection
+    await new Promise<void>((resolve) => {
+      inboundFromPeer.once('open', () => resolve())
+    })
+
+    webSocketServer.close()
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+
+    expect(connections).toBe(1)
+    expect(peerServer.clients.size).toBe(0)
+
+    inboundFromPeer.terminate()
+    peerServer.close()
     server.close()
   })
 
