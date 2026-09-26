@@ -13,6 +13,7 @@ const PEER_RECONNECT_DELAY_MS = 1000
 export function attachWebSocketServer(
   server: Server,
   peers: string[] = [],
+  onNewBlock?: (block: import('./chain/block.js').Block) => void,
 ): BroadcastWebSocketServer {
   const sockets = new Set<WebSocket>()
   const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
@@ -66,6 +67,10 @@ export function attachWebSocketServer(
       }
 
       console.info(`WebSocket message received: ${result.message.type}`)
+
+      if (result.message.type === 'NEW_BLOCK') {
+        onNewBlock?.(result.message.block)
+      }
     })
 
     socket.on('close', () => {
