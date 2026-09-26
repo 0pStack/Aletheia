@@ -1,0 +1,39 @@
+/* Status lives in the word; weight and opacity only rank it (DESIGN.md, The Scene Owns
+   Colour Rule). Verified is the quiet default, Failed the one that must be noticed. */
+.badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.badge[data-status='checking'],
+.badge[data-status='pending'],
+.badge[data-status='unchecked'] {
+  color: var(--color-text-muted);
+}
+
+.badge[data-status='failed'] {
+  border-color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+button.badge {
+  background: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+button.badge:hover {
+  border-color: var(--color-text-muted);
+}
+
+button.badge:focus-visible {
+  outline: 1px solid var(--color-text);
+  outline-offset: 2px;
+}
