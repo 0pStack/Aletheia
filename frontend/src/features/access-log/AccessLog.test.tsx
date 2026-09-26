@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
@@ -34,6 +34,18 @@ describe('AccessLog', () => {
     expect(log).toHaveTextContent('Dr. Gregory House')
     expect(log).toHaveTextContent('Jackie Peyton')
     expect(log).toHaveTextContent('Opened the record')
+  })
+
+  it('marks each entry with whether the chain still vouches for it', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+
+    renderJournal('/patients/1')
+
+    const log = await screen.findByRole('list', { name: 'Access log' })
+    const entries = within(log).getAllByRole('listitem')
+    await waitFor(() => {
+      expect(within(log).getAllByText('Verified')).toHaveLength(entries.length)
+    })
   })
 
   it('lets a patient see who has opened their own record', async () => {
