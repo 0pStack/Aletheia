@@ -34,7 +34,13 @@ const blockchain = new Blockchain({
 })
 
 const server = createServer()
-const webSocketServer = attachWebSocketServer(server, peers, createChainSyncHandlers(blockchain))
+const webSocketServer = attachWebSocketServer(
+  server,
+  peers,
+  createChainSyncHandlers(blockchain, (block) => {
+    webSocketServer.broadcast({ type: 'NEW_BLOCK', block })
+  }),
+)
 
 if (!savedChain) {
   console.info(`No saved chain found, starting a new one in ${chainPath}`)
