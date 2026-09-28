@@ -13,7 +13,7 @@ function loginUsername(body: unknown): string {
   return typeof username === 'string' ? username.trim() : ''
 }
 
-export function createAuthRouter(db: DatabaseType): Router {
+export function createAuthRouter(db: DatabaseType, sessionCookieName = 'connect.sid'): Router {
   const router = Router()
 
   // Counted per address and username: behind the dev proxy every request comes from
@@ -81,7 +81,7 @@ export function createAuthRouter(db: DatabaseType): Router {
         return
       }
 
-      res.clearCookie('connect.sid')
+      res.clearCookie(sessionCookieName)
       ok(res, { message: 'Logged out successfully' })
     })
   })

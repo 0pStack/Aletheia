@@ -295,3 +295,58 @@ describe('session fixation', () => {
     expect(sessionId(second)).not.toBe(sessionId(first))
   })
 })
+
+describe('one session per node', () => {
+  const cookieNamed = (res: request.Response, name: string): string | undefined =>
+    (res.headers['set-cookie'] as unknown as string[] | undefined)
+      ?.find((cookie) => cookie.startsWith(`${name}=`))
+      ?.split(';')[0]
+
+  const nodeApp = (port: number): Express =>
+    createApp({ db, keyPair: generateKeyPair(), sessionCookieName: `aletheia.sid.${port}` })
+
+  it('names the session cookie after the node', async () => {
+    const res = await request(nodeApp(3001))
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+
+    expect(cookieNamed(res, 'aletheia.sid.3001')).toBeDefined()
+  })
+
+  it('keeps two users signed in on two nodes in the same browser', async () => {
+    const node1 = nodeApp(3001)
+    const node2 = nodeApp(3002)
+
+    const doctorLogin = await request(node1)
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+    const patientLogin = await request(node2)
+      .post('/api/auth/login')
+      .send({ username: 'patient_anna', password: PASSWORD })
+
+    const browserCookies = [
+      cookieNamed(doctorLogin, 'aletheia.sid.3001'),
+      cookieNamed(patientLogin, 'aletheia.sid.3002'),
+    ].join('; ')
+
+    const onNode1 = await request(node1).get('/api/auth/session').set('Cookie', browserCookies)
+    const onNode2 = await request(node2).get('/api/auth/session').set('Cookie', browserCookies)
+
+    expect(onNode1.body.data.username).toBe('doctor_dr_house')
+    expect(onNode2.body.data.username).toBe('patient_anna')
+  })
+
+  it("clears the node's own cookie on logout", async () => {
+    const app3001 = nodeApp(3001)
+    const login = await request(app3001)
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+
+    const res = await request(app3001)
+      .post('/api/auth/logout')
+      .set('Cookie', cookieNamed(login, 'aletheia.sid.3001') ?? '')
+
+    expect(res.status).toBe(200)
+    expect(cookieNamed(res, 'aletheia.sid.3001')).toBe('aletheia.sid.3001=')
+  })
+})
