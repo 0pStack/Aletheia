@@ -196,6 +196,10 @@ export class Blockchain {
     return findFirstInvalidBlockIndex(this.chain, this.trustedKeys)
   }
 
+  isValidThrough(position: number): boolean {
+    return findFirstInvalidBlockIndex(this.chain.slice(0, position + 1), this.trustedKeys) === null
+  }
+
   isChainValid(): boolean {
     return this.findFirstInvalidBlockIndex() === null
   }
