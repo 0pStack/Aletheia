@@ -96,6 +96,25 @@ describe('Blockchain deferred flush failures', () => {
     expect(blockchain.getLatestBlock().data.map((e) => e.id)).toEqual(['a', 'b'])
   })
 
+  it('logs a throwing onFlushError instead of letting it escape the timer', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const blockchain = new Blockchain({
+      batchSize: 5,
+      flushIntervalMs: 2000,
+      onBlockAdded: () => {
+        throw new Error('disk full')
+      },
+      onFlushError: () => {
+        throw new Error('handler broke')
+      },
+    })
+
+    blockchain.addEvent(event('a'))
+
+    expect(() => vi.advanceTimersByTime(2000)).not.toThrow()
+    expect(consoleError).toHaveBeenCalledWith('Chain flush error handler failed:', 'handler broke')
+  })
+
   it('still reports on the console when no onFlushError is wired', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const blockchain = new Blockchain({

@@ -132,7 +132,14 @@ export class Blockchain {
       this.flush()
     } catch (error) {
       if (this.onFlushError) {
-        this.onFlushError(error, events)
+        try {
+          this.onFlushError(error, events)
+        } catch (handlerError) {
+          console.error(
+            'Chain flush error handler failed:',
+            handlerError instanceof Error ? handlerError.message : 'Unknown error',
+          )
+        }
         return
       }
       console.error(
