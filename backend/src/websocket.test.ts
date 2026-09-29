@@ -1,6 +1,6 @@
 import { createServer } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Block } from './chain/block.js'
 import { Blockchain } from './chain/blockchain.js'
 import { attachWebSocketServer } from './websocket.js'
@@ -503,6 +503,110 @@ describe('attachWebSocketServer', () => {
     consoleInfo.mockRestore()
     webSocketServer.close()
     server.close()
+  })
+
+  describe('peer reconnect backoff', () => {
+    // setImmediate stays real so socket I/O can be awaited while the reconnect timers are fake.
+    const waitUntil = (predicate: () => boolean): Promise<void> =>
+      new Promise((resolve) => {
+        const check = (): void => {
+          if (predicate()) {
+            resolve()
+          } else {
+            setImmediate(check)
+          }
+        }
+        check()
+      })
+
+    const listeningPeerServer = async (): Promise<{ peerServer: WebSocketServer; url: string }> => {
+      const peerServer = new WebSocketServer({ port: 0 })
+
+      await new Promise<void>((resolve) => {
+        peerServer.once('listening', () => resolve())
+      })
+
+      const address = peerServer.address()
+
+      if (!address || typeof address === 'string') {
+        throw new Error('Could not determine peer server port')
+      }
+
+      return { peerServer, url: `ws://localhost:${address.port}` }
+    }
+
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    it('waits longer after every failed attempt while a peer stays unreachable', async () => {
+      const server = createServer()
+      const { peerServer, url } = await listeningPeerServer()
+      await new Promise<void>((resolve) => {
+        peerServer.close(() => resolve())
+      })
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      vi.spyOn(Math, 'random').mockReturnValue(0)
+      vi.spyOn(console, 'info').mockImplementation(() => undefined)
+      let failures = 0
+      vi.spyOn(console, 'error').mockImplementation(() => {
+        failures += 1
+      })
+
+      const webSocketServer = attachWebSocketServer(server, [url])
+
+      for (const [attempt, delay] of [500, 1000, 2000].entries()) {
+        await waitUntil(() => failures === attempt + 1 && vi.getTimerCount() === 1)
+
+        await vi.advanceTimersByTimeAsync(delay - 1)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(vi.getTimerCount()).toBe(0)
+      }
+
+      await waitUntil(() => failures === 4)
+
+      webSocketServer.close()
+      expect(vi.getTimerCount()).toBe(0)
+      server.close()
+    })
+
+    it('starts over from the shortest delay after a connection succeeds', async () => {
+      const server = createServer()
+      const { peerServer, url } = await listeningPeerServer()
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      vi.spyOn(Math, 'random').mockReturnValue(0)
+      let opens = 0
+      vi.spyOn(console, 'info').mockImplementation((message: unknown) => {
+        if (message === `Connected to peer: ${url}`) {
+          opens += 1
+        }
+      })
+
+      const webSocketServer = attachWebSocketServer(server, [url])
+
+      for (const expectedOpens of [1, 2, 3]) {
+        await waitUntil(() => opens === expectedOpens)
+        for (const client of peerServer.clients) {
+          client.terminate()
+        }
+        await waitUntil(() => vi.getTimerCount() === 1)
+
+        await vi.advanceTimersByTimeAsync(499)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(vi.getTimerCount()).toBe(0)
+      }
+
+      webSocketServer.close()
+      peerServer.close()
+      server.close()
+    })
   })
 
   it.each([

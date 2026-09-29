@@ -1,6 +1,7 @@
 import type { Server } from 'node:http'
 import { WebSocket, WebSocketServer, type RawData } from 'ws'
 import type { Block } from './chain/block.js'
+import { peerReconnectDelay } from './peer-reconnect.js'
 import { parseWebSocketMessage, type WebSocketMessage } from './websocket-message.js'
 
 export { WEB_SOCKET_MESSAGE_TYPES, type WebSocketMessageType } from './websocket-message.js'
@@ -14,8 +15,6 @@ export interface PeerHandlers {
   readonly getChain?: () => readonly Block[]
   readonly onChain?: (chain: readonly Block[]) => void
 }
-
-const PEER_RECONNECT_DELAY_MS = 1000
 
 function send(socket: WebSocket, message: WebSocketMessage): void {
   if (socket.readyState === WebSocket.OPEN) {
@@ -31,6 +30,7 @@ export function attachWebSocketServer(
   const sockets = new Set<WebSocket>()
   const peerSockets = new Set<WebSocket>()
   const awaitingChain = new WeakSet<WebSocket>()
+  const reconnectTimers = new Set<ReturnType<typeof setTimeout>>()
   const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
   let closed = false
 
@@ -87,12 +87,14 @@ export function attachWebSocketServer(
     }
   }
 
-  const connectToPeer = (peer: string): void => {
+  const connectToPeer = (peer: string, attempt = 0): void => {
     const socket = new WebSocket(peer)
     sockets.add(socket)
     peerSockets.add(socket)
+    let opened = false
 
     socket.on('open', () => {
+      opened = true
       console.info(`Connected to peer: ${peer}`)
       requestChain(socket)
     })
@@ -108,9 +110,12 @@ export function attachWebSocketServer(
         return
       }
 
-      setTimeout(() => {
-        connectToPeer(peer)
-      }, PEER_RECONNECT_DELAY_MS)
+      const failedAttempts = opened ? 0 : attempt
+      const timer = setTimeout(() => {
+        reconnectTimers.delete(timer)
+        connectToPeer(peer, failedAttempts + 1)
+      }, peerReconnectDelay(failedAttempts))
+      reconnectTimers.add(timer)
     })
 
     socket.on('error', (error) => {
@@ -139,6 +144,11 @@ export function attachWebSocketServer(
   const closeServer = webSocketServer.close.bind(webSocketServer)
   webSocketServer.close = (callback) => {
     closed = true
+
+    for (const timer of reconnectTimers) {
+      clearTimeout(timer)
+    }
+    reconnectTimers.clear()
 
     for (const socket of peerSockets) {
       socket.terminate()
