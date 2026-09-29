@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { createApp } from './app.js'
 import { reportFlushFailure } from './audit-logger.js'
 import { loadNodeKeyPair } from './chain/node-identity.js'
+import { loadTrustedNodeKeys } from './chain/trusted-node-keys.js'
 import { resolvePort } from './config/port.js'
 import { resolvePeers } from './config/peers.js'
 import { attachWebSocketServer } from './websocket.js'
@@ -12,6 +13,8 @@ import { createChainSyncHandlers } from './peer-sync.js'
 const keyPair = loadNodeKeyPair()
 const port = resolvePort(process.env.PORT)
 const peers = resolvePeers(process.env.PEERS)
+const trustedKeysDirectory = process.env.TRUSTED_NODE_KEYS_DIR?.trim() || './keys/trusted'
+const trustedKeys = loadTrustedNodeKeys(trustedKeysDirectory, keyPair.publicKey)
 
 console.info(`Node public key loaded: ${keyPair.publicKey}`)
 console.info(`Configured peers: ${peers.length}`)
@@ -23,6 +26,7 @@ const blockchain = new Blockchain({
   batchSize: 5,
   flushIntervalMs: 2000,
   chain: savedChain,
+  trustedKeys,
   onBlockAdded: (chain) => saveChain(chainPath, chain),
   onFlushError: reportFlushFailure,
   onNewBlock: (block) => {

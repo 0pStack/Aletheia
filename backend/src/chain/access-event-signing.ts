@@ -1,6 +1,7 @@
 import { sign, verify } from 'node:crypto'
 import type { AccessEvent } from './access-event.js'
 import { stableStringify } from './stable-stringify.js'
+import type { TrustedNodeKeys } from './trusted-node-keys.js'
 
 export function signAccessEvent(
   event: AccessEvent,
@@ -20,8 +21,11 @@ export function signAccessEvent(
   }
 }
 
-export function verifyAccessEvent(event: AccessEvent): boolean {
+// Without trustedKeys this only proves the event matches the key it carries, which anyone
+// can generate. Anything that decides whether to believe an event must pass trustedKeys.
+export function verifyAccessEvent(event: AccessEvent, trustedKeys?: TrustedNodeKeys): boolean {
   if (!event.signature || !event.publicKey) return false
+  if (trustedKeys && !trustedKeys.isTrusted(event.publicKey)) return false
 
   try {
     const data = stableStringify(getUnsignedAccessEvent(event))
