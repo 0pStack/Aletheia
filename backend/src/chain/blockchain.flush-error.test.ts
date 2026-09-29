@@ -113,6 +113,7 @@ describe('Blockchain deferred flush failures', () => {
 
     expect(() => vi.advanceTimersByTime(2000)).not.toThrow()
     expect(consoleError).toHaveBeenCalledWith('Chain flush error handler failed:', 'handler broke')
+    expect(consoleError).toHaveBeenCalledWith('Deferred chain flush failed:', 'disk full')
   })
 
   it('still reports on the console when no onFlushError is wired', () => {

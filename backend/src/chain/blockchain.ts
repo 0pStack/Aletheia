@@ -134,13 +134,14 @@ export class Blockchain {
       if (this.onFlushError) {
         try {
           this.onFlushError(error, events)
+          return
         } catch (handlerError) {
+          // Falls through so the original flush failure is still reported.
           console.error(
             'Chain flush error handler failed:',
             handlerError instanceof Error ? handlerError.message : 'Unknown error',
           )
         }
-        return
       }
       console.error(
         'Deferred chain flush failed:',
