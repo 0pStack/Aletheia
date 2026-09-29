@@ -110,13 +110,15 @@ export class Blockchain {
 
     const events = this.pending
     this.pending = []
+    const heightBefore = this.chain.length
 
     try {
       return this.addBlock(events)
     } catch (error) {
       // A block that reached the chain before a hook failed is written by the next save,
       // which stores the whole chain. Re-queuing it would record the events twice.
-      if (this.getLatestBlock().data !== events) {
+      const reachedChain = this.chain.length > heightBefore
+      if (!reachedChain) {
         this.pending = [...events, ...this.pending]
       }
       throw error
