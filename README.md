@@ -80,6 +80,13 @@ The server listens on http://localhost:3001 (set `PORT` to change it). `GET /api
 | `npm run typecheck`               | TypeScript check without building                                 |
 | `npm run format` / `format:check` | Prettier                                                          |
 | `npm run build` / `npm start`     | Compile to `dist/` and run it                                     |
+| `npm run demo`                    | Seed, start both nodes and run the tamper demo (see below)        |
+
+### Two-node demo
+
+`npm run demo` reseeds the database, starts nodes 3001 and 3002, and signs in a doctor, a nurse and a patient to read, write and be refused access. It waits until both nodes hold the same chain, then stops node 3002, rewrites who made the first recorded access in its saved chain, and restarts it. Node 3002 logs a warning on startup and `GET /api/chain/status` reports the block that was edited, while node 3001 stays valid. The nodes keep running until Ctrl+C, so the frontend can be pointed at them (`VITE_USE_MOCKS=false`).
+
+The demo keeps its chains in `backend/data/demo/` and clears them on every run, so the chains in `backend/data/` are left alone. The nodes read that folder from `CHAIN_DIR`, which defaults to `data`.
 
 `better-sqlite3` is pinned to 12.11 because version 13 compiles from source on install, which fails on Windows without Visual Studio Build Tools. Don't upgrade it until 13 ships prebuilt install binaries again.
 
