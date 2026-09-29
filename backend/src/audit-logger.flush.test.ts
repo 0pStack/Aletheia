@@ -97,3 +97,29 @@ describe('a deferred flush that cannot save the chain', () => {
     expect(loggedText()).not.toMatch(/ALERT/)
   })
 })
+
+describe('a full batch that cannot save the chain', () => {
+  it('counts every event when the request that fills the batch cannot save it', () => {
+    const blockchain = new Blockchain({
+      batchSize: 3,
+      onBlockAdded: () => {
+        throw new Error('EIO: i/o error')
+      },
+      onFlushError: reportFlushFailure,
+    })
+    const before = auditLogFailures()
+
+    logAccessEvent(doctorRequest(), blockchain, PATIENT_ID, 'DENIED', keyPair)
+    logAccessEvent(doctorRequest(), blockchain, PATIENT_ID, 'DENIED', keyPair)
+
+    expect(() => logAccessEvent(doctorRequest(), blockchain, PATIENT_ID, 'READ', keyPair)).toThrow(
+      /EIO/,
+    )
+
+    const after = auditLogFailures()
+    expect(after.count).toBe(before.count + 3)
+    expect(after.deniedCount).toBe(before.deniedCount + 2)
+    expect(loggedText()).toMatch(/ALERT/)
+    expect(loggedText()).not.toContain(String(PATIENT_ID))
+  })
+})
