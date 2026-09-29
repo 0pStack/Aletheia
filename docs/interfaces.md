@@ -158,6 +158,7 @@ interface Block {
 * Each event is a Merkle leaf: `sha256(stableStringify(event))` (keys sorted). A pair is combined as `sha256(left + right)` on hex strings. An odd level duplicates its last hash. A block with no events has the root `sha256('')`.
 * The block hash covers `index`, `timestamp`, `merkleRoot`, `previousHash` and `nonce`. It covers the events **through** the Merkle root, so `isChainValid` recomputes the root from `data`.
 * Each node saves its chain to `backend/data/chain-<port>.json` after every new block and loads it on startup. If the saved chain fails `isChainValid`, the node still starts but logs a warning. Pending events are flushed on shutdown (Ctrl+C), so they are saved too. Only a hard crash (e.g. power loss) can lose events that are still pending.
+* **Forks:** if the nodes build different blocks while they can't reach each other, the longest valid chain wins when they reconnect. Events on the losing branch are **not** lost. The node that switches chain puts every event the new chain doesn't hold back at the front of its pending list, with its original id, timestamp, `serverId` and signature. They are sealed into a new block on top of the winning chain at the next flush, which is broadcast to the other node as usual. An access log that forgets accesses would defeat the purpose of the system, so re-adding was chosen over accepting the loss.
 * The genesis block has a fixed timestamp, so every node has the same genesis block.
 
 ---
