@@ -16,11 +16,23 @@ export interface PeerHandlers {
 }
 
 const PEER_RECONNECT_DELAY_MS = 1000
+export const CHAIN_REQUEST_LIMIT = 5
+const CHAIN_REQUEST_WINDOW_MS = 10_000
 
 function send(socket: WebSocket, message: WebSocketMessage): void {
+  sendPayload(socket, JSON.stringify(message))
+}
+
+function sendPayload(socket: WebSocket, payload: string): void {
   if (socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(message))
+    socket.send(payload)
   }
+}
+
+// Blocks are hash-linked and a chain is only ever replaced by a longer one, so the length
+// and tip hash identify its contents without serializing it.
+function chainKey(chain: readonly Block[]): string {
+  return `${chain.length}:${chain[chain.length - 1]?.hash ?? ''}`
 }
 
 export function attachWebSocketServer(
@@ -31,6 +43,8 @@ export function attachWebSocketServer(
   const sockets = new Set<WebSocket>()
   const peerSockets = new Set<WebSocket>()
   const awaitingChain = new WeakSet<WebSocket>()
+  const chainRequestTimes = new WeakMap<WebSocket, readonly number[]>()
+  let cachedChainResponse: { readonly key: string; readonly payload: string } | null = null
   const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
   let closed = false
 
@@ -57,6 +71,32 @@ export function attachWebSocketServer(
     }
   }
 
+  const allowChainRequest = (socket: WebSocket): boolean => {
+    const now = Date.now()
+    const recent = (chainRequestTimes.get(socket) ?? []).filter(
+      (time) => now - time < CHAIN_REQUEST_WINDOW_MS,
+    )
+
+    if (recent.length >= CHAIN_REQUEST_LIMIT) {
+      chainRequestTimes.set(socket, recent)
+      return false
+    }
+
+    chainRequestTimes.set(socket, [...recent, now])
+    return true
+  }
+
+  const chainResponsePayload = (chain: readonly Block[]): string => {
+    const key = chainKey(chain)
+
+    if (cachedChainResponse?.key !== key) {
+      const message: WebSocketMessage = { type: 'CHAIN_RESPONSE', chain }
+      cachedChainResponse = { key, payload: JSON.stringify(message) }
+    }
+
+    return cachedChainResponse.payload
+  }
+
   const handleMessage = (socket: WebSocket, data: RawData): void => {
     const result = parseWebSocketMessage(data.toString())
 
@@ -73,9 +113,14 @@ export function attachWebSocketServer(
         handlers.onNewBlock?.(message.block, requestChainFromPeers)
         return
       case 'CHAIN_REQUEST':
-        if (handlers.getChain) {
-          send(socket, { type: 'CHAIN_RESPONSE', chain: handlers.getChain() })
+        if (!handlers.getChain) {
+          return
         }
+        if (!allowChainRequest(socket)) {
+          console.warn('Rate limited a CHAIN_REQUEST')
+          return
+        }
+        sendPayload(socket, chainResponsePayload(handlers.getChain()))
         return
       case 'CHAIN_RESPONSE':
         if (!awaitingChain.delete(socket)) {
