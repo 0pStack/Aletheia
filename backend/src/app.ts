@@ -34,11 +34,13 @@ export interface CreateAppOptions {
   db?: DatabaseType
   blockchain?: Blockchain
   keyPair: KeyPair
+  sessionCookieName?: string
 }
 
 export function createApp(options: CreateAppOptions): Express {
   const db = options.db ?? defaultDb
   const blockchain = options.blockchain ?? new Blockchain()
+  const sessionCookieName = options.sessionCookieName ?? 'connect.sid'
   const app = express()
   // requireRole records refused attempts, and reaches the chain, the patients and the
   // signing key through here, without every route having to pass them in.
@@ -50,6 +52,7 @@ export function createApp(options: CreateAppOptions): Express {
 
   app.use(
     session({
+      name: sessionCookieName,
       secret: resolveSessionSecret(process.env.SESSION_SECRET),
       resave: false,
       saveUninitialized: false,
@@ -79,7 +82,7 @@ export function createApp(options: CreateAppOptions): Express {
     })
   })
 
-  app.use('/api/auth', createAuthRouter(db))
+  app.use('/api/auth', createAuthRouter(db, sessionCookieName))
   app.use('/api/patients', createNotesRouter(db, blockchain, options.keyPair))
   app.use('/api/patients', createAccessLogRouter(db, blockchain, options.keyPair))
   app.use('/api/patients', createPatientsRouter(db, blockchain, options.keyPair))

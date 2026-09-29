@@ -51,7 +51,7 @@ if (!savedChain) {
     `WARNING: the saved chain in ${chainPath} is INVALID. It may have been tampered with.`,
   )
 }
-const app = createApp({ blockchain, keyPair })
+const app = createApp({ blockchain, keyPair, sessionCookieName: `aletheia.sid.${port}` })
 server.on('request', app)
 
 server.listen(port, () => {
