@@ -2,6 +2,7 @@ import { verifyAccessEvent } from './access-event-signing.js'
 import { Block, type BlockData } from './block.js'
 import { calculateMerkleRoot } from './merkle.js'
 import { hasOnlyAllowedBlockchainPayloadFields } from './payload-security.js'
+import type { TrustedNodeKeys } from './trusted-node-keys.js'
 
 // Validation is synchronous and costs a hash per block and a signature check per event,
 // so a peer could stall the event loop by sending a huge chain. These caps bound that work.
@@ -18,7 +19,10 @@ function isWithinSizeLimits(chain: Block[]): boolean {
   return eventCount <= MAX_INCOMING_CHAIN_EVENTS
 }
 
-export function findFirstInvalidBlockIndex(chain: Block[]): number | null {
+export function findFirstInvalidBlockIndex(
+  chain: Block[],
+  trustedKeys?: TrustedNodeKeys,
+): number | null {
   const genesisBlock = chain[0]
 
   if (!genesisBlock || genesisBlock.previousHash !== '0') {
@@ -40,7 +44,7 @@ export function findFirstInvalidBlockIndex(chain: Block[]): number | null {
       return i
     }
 
-    if (!currentBlock.data.every(verifyAccessEvent)) {
+    if (!currentBlock.data.every((event) => verifyAccessEvent(event, trustedKeys))) {
       return i
     }
 
@@ -83,7 +87,11 @@ export function parseChain(json: unknown): Block[] | undefined {
   return json.map((block) => Block.fromJSON(block))
 }
 
-export function isValidIncomingChain(incoming: Block[], ourGenesis: Block): boolean {
+export function isValidIncomingChain(
+  incoming: Block[],
+  ourGenesis: Block,
+  trustedKeys?: TrustedNodeKeys,
+): boolean {
   if (!isWithinSizeLimits(incoming)) {
     return false
   }
@@ -102,5 +110,5 @@ export function isValidIncomingChain(incoming: Block[], ourGenesis: Block): bool
     return false
   }
 
-  return findFirstInvalidBlockIndex(incoming) === null
+  return findFirstInvalidBlockIndex(incoming, trustedKeys) === null
 }

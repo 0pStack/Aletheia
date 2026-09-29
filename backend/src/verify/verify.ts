@@ -1,7 +1,6 @@
 import type { AccessEvent } from '../chain/access-event.js'
 import type { Block } from '../chain/block.js'
 import type { Blockchain } from '../chain/blockchain.js'
-import { findFirstInvalidBlockIndex } from '../chain/chain-validation.js'
 import {
   getMerkleProof,
   hashLeaf,
@@ -46,8 +45,7 @@ export function proveEvent(blockchain: Blockchain, { block, event }: LocatedEven
   // A block is only as trustworthy as the chain leading up to it, so later blocks are
   // neither checked nor able to spoil the answer.
   // Sliced by position, not by block.index, which a tampered block could misstate.
-  const upToBlock = blockchain.chain.slice(0, blockchain.chain.indexOf(block) + 1)
-  const chainHolds = findFirstInvalidBlockIndex(upToBlock) === null
+  const chainHolds = blockchain.isValidThrough(blockchain.chain.indexOf(block))
 
   return {
     eventId: event.id,
