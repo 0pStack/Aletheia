@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildField, FIELD_SIZE } from './meerkatField'
 
 // A sphere of radius 0.25 in the middle of the grid, encoded the way the bake writes distance.
@@ -65,5 +65,47 @@ describe('buildField', () => {
 
     expect(length).toBeGreaterThan(0.9)
     expect(length).toBeLessThan(1.1)
+  })
+})
+
+describe('loadMeerkatField', () => {
+  // The field is cached per page, so each case gets a fresh module.
+  async function freshLoader() {
+    vi.resetModules()
+    const { loadMeerkatField } = await import('./meerkatField')
+    return loadMeerkatField
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('fetches the field from the asset base and builds it once', async () => {
+    const fetchField = vi.fn(() =>
+      Promise.resolve(new Response(new Uint8Array(FIELD_SIZE ** 3).buffer)),
+    )
+    vi.stubGlobal('fetch', fetchField)
+    const load = await freshLoader()
+
+    const first = await load('/assets/')
+    const second = await load('/assets/')
+
+    expect(fetchField).toHaveBeenCalledTimes(1)
+    expect(fetchField).toHaveBeenCalledWith('/assets/team/meerkat_64.sdf')
+    expect(first).toHaveLength(FIELD_SIZE ** 3 * 4)
+    expect(second).toBe(first)
+  })
+
+  it('reports a failed response and tries again on the next call', async () => {
+    const fetchField = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array(FIELD_SIZE ** 3).buffer))
+    vi.stubGlobal('fetch', fetchField)
+    const load = await freshLoader()
+
+    await expect(load('/')).rejects.toThrow('Meerkat field: HTTP 404')
+    await expect(load('/')).resolves.toHaveLength(FIELD_SIZE ** 3 * 4)
+    expect(fetchField).toHaveBeenCalledTimes(2)
   })
 })

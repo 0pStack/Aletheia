@@ -16,10 +16,39 @@ export interface PeerHandlers {
   readonly onChain?: (chain: readonly Block[]) => void
 }
 
+export const CHAIN_REQUEST_LIMIT = 5
+const CHAIN_REQUEST_WINDOW_MS = 10_000
+
+// A signed block serialises to about 0.7 KB, so a CHAIN_RESPONSE fits roughly
+// 7,000 blocks, while a peer can no longer make us buffer and JSON.parse ws's 100 MiB default.
+export const MAX_WEB_SOCKET_PAYLOAD_BYTES = 5 * 1024 * 1024
+
+const WS_ERR_MESSAGE_TOO_BIG = 'WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'
+
+function isOversizeMessageError(error: Error): boolean {
+  return 'code' in error && error.code === WS_ERR_MESSAGE_TOO_BIG
+}
+
+function warnOversizeMessage(source: string): void {
+  console.warn(
+    `Rejected oversize WebSocket message from ${source} (limit ${MAX_WEB_SOCKET_PAYLOAD_BYTES} bytes)`,
+  )
+}
+
 function send(socket: WebSocket, message: WebSocketMessage): void {
+  sendPayload(socket, JSON.stringify(message))
+}
+
+function sendPayload(socket: WebSocket, payload: string): void {
   if (socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(message))
+    socket.send(payload)
   }
+}
+
+// Blocks are hash-linked and a chain is only ever replaced by a longer one, so the length
+// and tip hash identify its contents without serializing it.
+function chainKey(chain: readonly Block[]): string {
+  return `${chain.length}:${chain[chain.length - 1]?.hash ?? ''}`
 }
 
 export function attachWebSocketServer(
@@ -31,7 +60,12 @@ export function attachWebSocketServer(
   const peerSockets = new Set<WebSocket>()
   const awaitingChain = new WeakSet<WebSocket>()
   const reconnectTimers = new Set<ReturnType<typeof setTimeout>>()
-  const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
+  const chainRequestTimes = new WeakMap<WebSocket, readonly number[]>()
+  let cachedChainResponse: { readonly key: string; readonly payload: string } | null = null
+  const webSocketServer = new WebSocketServer({
+    server,
+    maxPayload: MAX_WEB_SOCKET_PAYLOAD_BYTES,
+  }) as BroadcastWebSocketServer
   let closed = false
 
   // Event signatures are checked against the key inside the event, so a made-up chain
@@ -57,6 +91,32 @@ export function attachWebSocketServer(
     }
   }
 
+  const allowChainRequest = (socket: WebSocket): boolean => {
+    const now = Date.now()
+    const recent = (chainRequestTimes.get(socket) ?? []).filter(
+      (time) => now - time < CHAIN_REQUEST_WINDOW_MS,
+    )
+
+    if (recent.length >= CHAIN_REQUEST_LIMIT) {
+      chainRequestTimes.set(socket, recent)
+      return false
+    }
+
+    chainRequestTimes.set(socket, [...recent, now])
+    return true
+  }
+
+  const chainResponsePayload = (chain: readonly Block[]): string => {
+    const key = chainKey(chain)
+
+    if (cachedChainResponse?.key !== key) {
+      const message: WebSocketMessage = { type: 'CHAIN_RESPONSE', chain }
+      cachedChainResponse = { key, payload: JSON.stringify(message) }
+    }
+
+    return cachedChainResponse.payload
+  }
+
   const handleMessage = (socket: WebSocket, data: RawData): void => {
     const result = parseWebSocketMessage(data.toString())
 
@@ -73,9 +133,14 @@ export function attachWebSocketServer(
         handlers.onNewBlock?.(message.block, requestChainFromPeers)
         return
       case 'CHAIN_REQUEST':
-        if (handlers.getChain) {
-          send(socket, { type: 'CHAIN_RESPONSE', chain: handlers.getChain() })
+        if (!handlers.getChain) {
+          return
         }
+        if (!allowChainRequest(socket)) {
+          console.warn('Rate limited a CHAIN_REQUEST')
+          return
+        }
+        sendPayload(socket, chainResponsePayload(handlers.getChain()))
         return
       case 'CHAIN_RESPONSE':
         if (!awaitingChain.delete(socket)) {
@@ -88,7 +153,7 @@ export function attachWebSocketServer(
   }
 
   const connectToPeer = (peer: string, attempt = 0): void => {
-    const socket = new WebSocket(peer)
+    const socket = new WebSocket(peer, { maxPayload: MAX_WEB_SOCKET_PAYLOAD_BYTES })
     sockets.add(socket)
     peerSockets.add(socket)
     let opened = false
@@ -119,6 +184,11 @@ export function attachWebSocketServer(
     })
 
     socket.on('error', (error) => {
+      if (isOversizeMessageError(error)) {
+        warnOversizeMessage(`peer ${peer}`)
+        return
+      }
+
       console.error('Peer connection error:', peer, error)
     })
   }
@@ -136,6 +206,15 @@ export function attachWebSocketServer(
     socket.on('close', () => {
       sockets.delete(socket)
       console.info('WebSocket client disconnected')
+    })
+
+    socket.on('error', (error) => {
+      if (isOversizeMessageError(error)) {
+        warnOversizeMessage('client')
+        return
+      }
+
+      console.error('WebSocket client error:', error)
     })
   })
 
