@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AccessEvent } from './access-event.js'
 import { signAccessEvent } from './access-event-signing.js'
 import { Block } from './block.js'
 import { Blockchain } from './blockchain.js'
-import { findFirstInvalidBlockIndex, isValidIncomingChain, parseChain } from './chain-validation.js'
+import {
+  findFirstInvalidBlockIndex,
+  isValidIncomingChain,
+  MAX_INCOMING_CHAIN_BLOCKS,
+  MAX_INCOMING_CHAIN_EVENTS,
+  parseChain,
+} from './chain-validation.js'
 import { generateKeyPair } from './keypair.js'
 
 const testEvent: AccessEvent = {
@@ -103,6 +109,32 @@ describe('isValidIncomingChain', () => {
     peer.addBlock([leaky])
 
     expect(isValidIncomingChain(peer.chain, ourGenesis)).toBe(false)
+  })
+})
+
+describe('isValidIncomingChain size limits', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('rejects a chain with too many blocks without validating it', () => {
+    const peer = new Blockchain()
+    while (peer.chain.length <= MAX_INCOMING_CHAIN_BLOCKS) {
+      peer.addBlock([])
+    }
+    const hashSpy = vi.spyOn(Block.prototype, 'calculateHash')
+
+    expect(isValidIncomingChain(peer.chain, ourGenesis)).toBe(false)
+    expect(hashSpy).not.toHaveBeenCalled()
+  })
+
+  it('rejects a chain with too many events without validating it', () => {
+    const peer = new Blockchain()
+    peer.addBlock(Array.from({ length: MAX_INCOMING_CHAIN_EVENTS + 1 }, () => testEvent))
+    const hashSpy = vi.spyOn(Block.prototype, 'calculateHash')
+
+    expect(isValidIncomingChain(peer.chain, ourGenesis)).toBe(false)
+    expect(hashSpy).not.toHaveBeenCalled()
   })
 })
 

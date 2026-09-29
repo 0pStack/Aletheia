@@ -17,6 +17,22 @@ export interface PeerHandlers {
 
 const PEER_RECONNECT_DELAY_MS = 1000
 
+// A signed block serialises to about 0.7 KB, so a CHAIN_RESPONSE fits roughly
+// 7,000 blocks, while a peer can no longer make us buffer and JSON.parse ws's 100 MiB default.
+export const MAX_WEB_SOCKET_PAYLOAD_BYTES = 5 * 1024 * 1024
+
+const WS_ERR_MESSAGE_TOO_BIG = 'WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'
+
+function isOversizeMessageError(error: Error): boolean {
+  return 'code' in error && error.code === WS_ERR_MESSAGE_TOO_BIG
+}
+
+function warnOversizeMessage(source: string): void {
+  console.warn(
+    `Rejected oversize WebSocket message from ${source} (limit ${MAX_WEB_SOCKET_PAYLOAD_BYTES} bytes)`,
+  )
+}
+
 function send(socket: WebSocket, message: WebSocketMessage): void {
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message))
@@ -31,7 +47,10 @@ export function attachWebSocketServer(
   const sockets = new Set<WebSocket>()
   const peerSockets = new Set<WebSocket>()
   const awaitingChain = new WeakSet<WebSocket>()
-  const webSocketServer = new WebSocketServer({ server }) as BroadcastWebSocketServer
+  const webSocketServer = new WebSocketServer({
+    server,
+    maxPayload: MAX_WEB_SOCKET_PAYLOAD_BYTES,
+  }) as BroadcastWebSocketServer
   let closed = false
 
   // Event signatures are checked against the key inside the event, so a made-up chain
@@ -88,7 +107,7 @@ export function attachWebSocketServer(
   }
 
   const connectToPeer = (peer: string): void => {
-    const socket = new WebSocket(peer)
+    const socket = new WebSocket(peer, { maxPayload: MAX_WEB_SOCKET_PAYLOAD_BYTES })
     sockets.add(socket)
     peerSockets.add(socket)
 
@@ -114,6 +133,11 @@ export function attachWebSocketServer(
     })
 
     socket.on('error', (error) => {
+      if (isOversizeMessageError(error)) {
+        warnOversizeMessage(`peer ${peer}`)
+        return
+      }
+
       console.error('Peer connection error:', peer, error)
     })
   }
@@ -131,6 +155,15 @@ export function attachWebSocketServer(
     socket.on('close', () => {
       sockets.delete(socket)
       console.info('WebSocket client disconnected')
+    })
+
+    socket.on('error', (error) => {
+      if (isOversizeMessageError(error)) {
+        warnOversizeMessage('client')
+        return
+      }
+
+      console.error('WebSocket client error:', error)
     })
   })
 
