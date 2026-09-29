@@ -131,6 +131,19 @@ describe('Blockchain', () => {
     expect(blocks).toEqual([addedBlock])
   })
 
+  it('still broadcasts the new block when saving the chain fails, then rethrows', () => {
+    const blocks: Block[] = []
+    const blockchain = new Blockchain({
+      onBlockAdded: () => {
+        throw new Error('disk full')
+      },
+      onNewBlock: (block) => blocks.push(block),
+    })
+
+    expect(() => blockchain.addBlock([testEvent])).toThrow('disk full')
+    expect(blocks).toEqual([blockchain.getLatestBlock()])
+  })
+
   it('rejects a block containing an event with a forged signature', () => {
     const blockchain = new Blockchain()
     const attacker = generateKeyPair()

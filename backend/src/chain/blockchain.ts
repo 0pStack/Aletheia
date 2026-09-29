@@ -65,8 +65,14 @@ export class Blockchain {
     )
 
     this.chain.push(newBlock)
-    this.onBlockAdded?.(this.chain)
-    this.onNewBlock?.(newBlock)
+
+    // The block is already in our chain, so peers must hear about it even if the disk
+    // write fails; otherwise they only catch up on the next full sync.
+    try {
+      this.onBlockAdded?.(this.chain)
+    } finally {
+      this.onNewBlock?.(newBlock)
+    }
 
     return newBlock
   }
