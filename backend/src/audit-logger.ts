@@ -45,28 +45,28 @@ function recordFailures(
   })
 }
 
-function reportFailure(req: Request, action: AccessEvent['action'], error: unknown): void {
+function requestDetails(req: Request, action: AccessEvent['action']): Record<string, unknown> {
   const user = req.session.user
-  recordFailures(1, action === 'DENIED' ? 1 : 0, error, {
-    action,
-    userId: user?.id ?? null,
-    role: user?.role ?? null,
-  })
+  return { action, userId: user?.id ?? null, role: user?.role ?? null }
+}
+
+function reportFailure(req: Request, action: AccessEvent['action'], error: unknown): void {
+  recordFailures(1, action === 'DENIED' ? 1 : 0, error, requestDetails(req, action))
 }
 
 function reportBatchFailure(
   error: unknown,
   events: readonly AccessEvent[],
-  deferredFlush: boolean,
+  details: Readonly<Record<string, unknown>>,
 ): void {
   const denied = events.filter((event) => event.action === 'DENIED').length
-  recordFailures(events.length, denied, error, { deferredFlush, events: events.length })
+  recordFailures(events.length, denied, error, { ...details, events: events.length })
 }
 
-// Wired to Blockchain's onFlushError. The events were queued without error, so this is
-// the only place a batch that later failed to be saved gets counted.
+// Wired to Blockchain's onFlushError. The events were queued without error, so a batch
+// the timer later fails to save is counted here and nowhere else.
 export function reportFlushFailure(error: unknown, events: readonly AccessEvent[]): void {
-  reportBatchFailure(error, events, true)
+  reportBatchFailure(error, events, { deferredFlush: true })
 }
 
 export function logAccessEvent(
@@ -108,7 +108,10 @@ export function logAccessEvent(
   try {
     blockchain.addEvent(signed)
   } catch (error) {
-    reportBatchFailure(error, batch, false)
+    reportBatchFailure(error, batch, {
+      deferredFlush: false,
+      ...requestDetails(req, action),
+    })
     throw error
   }
 }

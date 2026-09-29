@@ -122,4 +122,19 @@ describe('a full batch that cannot save the chain', () => {
     expect(loggedText()).toMatch(/ALERT/)
     expect(loggedText()).not.toContain(String(PATIENT_ID))
   })
+
+  it('names the request that filled the batch in the server log', () => {
+    const blockchain = new Blockchain({
+      onBlockAdded: () => {
+        throw new Error('EIO: i/o error')
+      },
+    })
+
+    expect(() => logAccessEvent(doctorRequest(), blockchain, PATIENT_ID, 'WRITE', keyPair)).toThrow(
+      /EIO/,
+    )
+
+    expect(loggedText()).toMatch(/WRITE/)
+    expect(loggedText()).toMatch(/DOCTOR/)
+  })
 })
