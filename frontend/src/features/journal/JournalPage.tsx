@@ -8,6 +8,7 @@ import { NoteComposer } from './NoteForm'
 import { NoteList } from './NoteList'
 import { usePatientDetail } from './usePatientDetail'
 import styles from './JournalPage.module.css'
+import { useLiveAccessLog } from '../access-log/useLiveAccessLog'
 
 export const JOURNAL_TITLE_ID = 'journal-title'
 
@@ -32,6 +33,7 @@ export function JournalPage() {
   const patientId = parsePatientId(useParams().patientId)
   const viewer = useSession().data
   const detail = usePatientDetail(patientId)
+  useLiveAccessLog(patientId)
 
   if (patientId === null) return <PatientNotFound />
 

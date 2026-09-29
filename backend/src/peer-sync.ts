@@ -1,7 +1,11 @@
 import type { Blockchain } from './chain/blockchain.js'
 import type { PeerHandlers } from './websocket.js'
+import type { Block } from './chain/block.js'
 
-export function createChainSyncHandlers(blockchain: Blockchain): PeerHandlers {
+export function createChainSyncHandlers(
+  blockchain: Blockchain,
+  onBlockAccepted?: (block: Block) => void,
+): PeerHandlers {
   return {
     getChain: () => [...blockchain.chain],
 
@@ -12,6 +16,7 @@ export function createChainSyncHandlers(blockchain: Blockchain): PeerHandlers {
       }
 
       if (blockchain.acceptBlock(block)) {
+        onBlockAccepted?.(block)
         return
       }
 
