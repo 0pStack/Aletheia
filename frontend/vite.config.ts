@@ -37,13 +37,11 @@ export default defineConfig(({ mode }) => {
           'src/features/auth/liquid/{createLiquidRenderer,liquidShader}.ts',
           'src/features/patients/inventory/createInventoryScene.ts',
         ],
-        // Functions and branches are below 80% today (#117), so they are held at their current
-        // floor to stop them slipping; raise them as tests land.
         thresholds: {
           lines: 80,
           statements: 80,
-          functions: 77,
-          branches: 71,
+          functions: 80,
+          branches: 80,
         },
       },
     },
