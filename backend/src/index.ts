@@ -34,7 +34,13 @@ const blockchain = new Blockchain({
 })
 
 const server = createServer()
-const webSocketServer = attachWebSocketServer(server, peers, createChainSyncHandlers(blockchain))
+const webSocketServer = attachWebSocketServer(
+  server,
+  peers,
+  createChainSyncHandlers(blockchain, (block) => {
+    webSocketServer.broadcast({ type: 'NEW_BLOCK', block })
+  }),
+)
 
 if (!savedChain) {
   console.info(`No saved chain found, starting a new one in ${chainPath}`)
@@ -45,7 +51,7 @@ if (!savedChain) {
     `WARNING: the saved chain in ${chainPath} is INVALID. It may have been tampered with.`,
   )
 }
-const app = createApp({ blockchain, keyPair })
+const app = createApp({ blockchain, keyPair, sessionCookieName: `aletheia.sid.${port}` })
 server.on('request', app)
 
 server.listen(port, () => {
