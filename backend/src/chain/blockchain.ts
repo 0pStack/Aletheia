@@ -65,8 +65,14 @@ export class Blockchain {
     )
 
     this.chain.push(newBlock)
-    this.onBlockAdded?.(this.chain)
-    this.onNewBlock?.(newBlock)
+
+    // The block is already in our chain, so peers must hear about it even if the disk
+    // write fails; otherwise they only catch up on the next full sync.
+    try {
+      this.onBlockAdded?.(this.chain)
+    } finally {
+      this.onNewBlock?.(newBlock)
+    }
 
     return newBlock
   }
@@ -110,13 +116,15 @@ export class Blockchain {
 
     const events = this.pending
     this.pending = []
+    const heightBefore = this.chain.length
 
     try {
       return this.addBlock(events)
     } catch (error) {
       // A block that reached the chain before a hook failed is written by the next save,
       // which stores the whole chain. Re-queuing it would record the events twice.
-      if (this.getLatestBlock().data !== events) {
+      const reachedChain = this.chain.length > heightBefore
+      if (!reachedChain) {
         this.pending = [...events, ...this.pending]
       }
       throw error
@@ -132,8 +140,16 @@ export class Blockchain {
       this.flush()
     } catch (error) {
       if (this.onFlushError) {
-        this.onFlushError(error, events)
-        return
+        try {
+          this.onFlushError(error, events)
+          return
+        } catch (handlerError) {
+          // Falls through so the original flush failure is still reported.
+          console.error(
+            'Chain flush error handler failed:',
+            handlerError instanceof Error ? handlerError.message : 'Unknown error',
+          )
+        }
       }
       console.error(
         'Deferred chain flush failed:',

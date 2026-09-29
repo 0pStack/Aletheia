@@ -4,6 +4,7 @@ import { reportFlushFailure } from './audit-logger.js'
 import { loadNodeKeyPair } from './chain/node-identity.js'
 import { resolvePort } from './config/port.js'
 import { resolvePeers } from './config/peers.js'
+import { resolveChainPath } from './config/chain-path.js'
 import { attachWebSocketServer } from './websocket.js'
 import { Blockchain } from './chain/blockchain.js'
 import { loadChain, saveChain } from './chain/chain-storage.js'
@@ -16,7 +17,7 @@ const peers = resolvePeers(process.env.PEERS)
 console.info(`Node public key loaded: ${keyPair.publicKey}`)
 console.info(`Configured peers: ${peers.length}`)
 
-const chainPath = `./data/chain-${port}.json`
+const chainPath = resolveChainPath(process.env, port)
 const savedChain = loadChain(chainPath)
 
 const blockchain = new Blockchain({
