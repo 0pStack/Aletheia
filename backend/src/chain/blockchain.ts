@@ -169,8 +169,20 @@ export class Blockchain {
       return false
     }
 
+    const incomingEventIds = new Set(
+      incoming.flatMap((block) => block.data.map((event) => event.id)),
+    )
+    const orphanedEvents = this.chain
+      .flatMap((block) => block.data)
+      .filter((event) => !incomingEventIds.has(event.id))
+
     this.chain = [...incoming]
     this.onBlockAdded?.(this.chain)
+
+    if (orphanedEvents.length > 0) {
+      this.pending = [...orphanedEvents, ...this.pending]
+      this.startFlushTimer()
+    }
 
     return true
   }
