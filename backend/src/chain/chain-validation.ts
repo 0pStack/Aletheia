@@ -3,6 +3,21 @@ import { Block, type BlockData } from './block.js'
 import { calculateMerkleRoot } from './merkle.js'
 import { hasOnlyAllowedBlockchainPayloadFields } from './payload-security.js'
 
+// Validation is synchronous and costs a hash per block and a signature check per event,
+// so a peer could stall the event loop by sending a huge chain. These caps bound that work.
+export const MAX_INCOMING_CHAIN_BLOCKS = 5_000
+export const MAX_INCOMING_CHAIN_EVENTS = 10_000
+
+function isWithinSizeLimits(chain: Block[]): boolean {
+  if (chain.length > MAX_INCOMING_CHAIN_BLOCKS) {
+    return false
+  }
+
+  const eventCount = chain.reduce((total, block) => total + block.data.length, 0)
+
+  return eventCount <= MAX_INCOMING_CHAIN_EVENTS
+}
+
 export function findFirstInvalidBlockIndex(chain: Block[]): number | null {
   const genesisBlock = chain[0]
 
@@ -69,6 +84,10 @@ export function parseChain(json: unknown): Block[] | undefined {
 }
 
 export function isValidIncomingChain(incoming: Block[], ourGenesis: Block): boolean {
+  if (!isWithinSizeLimits(incoming)) {
+    return false
+  }
+
   const incomingGenesis = incoming[0]
 
   if (!incomingGenesis || incomingGenesis.hash !== ourGenesis.hash) {
