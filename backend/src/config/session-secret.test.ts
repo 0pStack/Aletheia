@@ -15,4 +15,14 @@ describe('resolveSessionSecret', () => {
   it('never falls back to the same secret twice, so it cannot be known in advance', () => {
     expect(resolveSessionSecret(undefined)).not.toBe(resolveSessionSecret(undefined))
   })
+
+  it.each([undefined, '', '   '])('refuses to start in production without a secret (%j)', (raw) => {
+    expect(() => resolveSessionSecret(raw, { production: true })).toThrow(/SESSION_SECRET/)
+  })
+
+  it('uses the configured secret in production', () => {
+    expect(resolveSessionSecret('a-long-configured-secret', { production: true })).toBe(
+      'a-long-configured-secret',
+    )
+  })
 })
