@@ -45,6 +45,7 @@ const webSocketServer = attachWebSocketServer(
   createChainSyncHandlers(blockchain, (block) => {
     webSocketServer.broadcast({ type: 'NEW_BLOCK', block })
   }),
+  { keyPair, trustedKeys },
 )
 
 if (!savedChain) {
