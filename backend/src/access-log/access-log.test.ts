@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AccessEvent } from '../chain/access-event.js'
 import { Blockchain } from '../chain/blockchain.js'
+import { signAccessEvent } from '../chain/access-event-signing.js'
+import type { BlockData } from '../chain/block.js'
+import { parseChain } from '../chain/chain-validation.js'
+import { generateKeyPair } from '../chain/keypair.js'
+import { createTrustedNodeKeys } from '../chain/trusted-node-keys.js'
 import { collectAccessLog } from './access-log.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -63,6 +68,47 @@ afterEach(() => {
 })
 
 describe('collectAccessLog', () => {
+  it('marks entries from a loaded tampered chain as invalid', () => {
+    const keys = generateKeyPair()
+    const trustedKeys = createTrustedNodeKeys([keys.publicKey])
+    const original = new Blockchain({ trustedKeys })
+    const signed = (id: string) => signAccessEvent(event({ id }), keys.privateKey, keys.publicKey)
+
+    original.addBlock([signed('before')])
+    original.addBlock([signed('edited'), signed('same-block')])
+    original.addBlock([signed('after')])
+
+    expect(original.isChainValid()).toBe(true)
+    expect(collectAccessLog(db, original, annaId).every((entry) => entry.isValid)).toBe(true)
+
+    const stored: BlockData[] = JSON.parse(JSON.stringify(original.chain))
+    const tampered = stored.map((block, position) =>
+      position === 2
+        ? {
+            ...block,
+            data: block.data.map((item) =>
+              item.id === 'edited' ? { ...item, action: 'DENIED' as const } : item,
+            ),
+          }
+        : block,
+    )
+
+    const chain = parseChain(tampered)
+    if (!chain) throw new Error('Test chain could not be loaded')
+
+    const loaded = new Blockchain({ chain, trustedKeys })
+    expect(loaded.isChainValid()).toBe(false)
+
+    const log = collectAccessLog(db, loaded, annaId)
+    expect(log.map(({ eventId, isValid }) => ({ eventId, isValid }))).toEqual([
+      { eventId: 'before', isValid: true },
+      { eventId: 'edited', isValid: false },
+      { eventId: 'same-block', isValid: false },
+      { eventId: 'after', isValid: false },
+    ])
+    expect(log.find((entry) => entry.eventId === 'edited')?.action).toBe('DENIED')
+  })
+
   it('returns an empty log when the chain holds only the genesis block', () => {
     expect(collectAccessLog(db, new Blockchain(), annaId)).toEqual([])
   })
