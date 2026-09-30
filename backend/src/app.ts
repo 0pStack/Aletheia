@@ -5,6 +5,8 @@ import { createAccessLogRouter } from './access-log/access-log.routes.js'
 import { createAuthRouter } from './auth/auth.routes.js'
 import { Blockchain } from './chain/blockchain.js'
 import type { KeyPair } from './chain/keypair.js'
+import { SqliteSessionStore } from './auth/sqlite-session-store.js'
+import { resolveSecureCookie } from './config/session-cookie.js'
 import { resolveSessionSecret } from './config/session-secret.js'
 import { db as defaultDb } from './db.js'
 import { ok } from './envelope.js'
@@ -53,13 +55,16 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(
     session({
       name: sessionCookieName,
-      secret: resolveSessionSecret(process.env.SESSION_SECRET),
+      secret: resolveSessionSecret(process.env.SESSION_SECRET, {
+        production: process.env.NODE_ENV === 'production',
+      }),
+      store: new SqliteSessionStore(db),
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         sameSite: 'lax',
-        secure: false,
+        secure: resolveSecureCookie(process.env),
         maxAge: 8 * 60 * 60 * 1000,
       },
     }),
