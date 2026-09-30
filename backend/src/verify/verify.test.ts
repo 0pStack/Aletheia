@@ -4,6 +4,7 @@ import { signAccessEvent } from '../chain/access-event-signing.js'
 import { Blockchain } from '../chain/blockchain.js'
 import { generateKeyPair } from '../chain/keypair.js'
 import { verifyMerkleProof } from '../chain/merkle.js'
+import { createTrustedNodeKeys } from '../chain/trusted-node-keys.js'
 import { locateEvent, proveEvent } from './verify.js'
 
 const keyPair = generateKeyPair()
@@ -106,6 +107,16 @@ describe('proveEvent', () => {
       if (first) first.data = [{ ...(first.data[0] as AccessEvent), userId: 99 }]
 
       expect(proofFor(blockchain, 'b').isValid).toBe(false)
+    })
+
+    it('when the event was signed by a key this node does not trust', () => {
+      const forgedChain = chainWith([makeEvent('a')]).chain
+      const blockchain = new Blockchain({
+        chain: forgedChain,
+        trustedKeys: createTrustedNodeKeys([generateKeyPair().publicKey]),
+      })
+
+      expect(proofFor(blockchain, 'a').isValid).toBe(false)
     })
   })
 

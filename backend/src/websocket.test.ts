@@ -1,9 +1,9 @@
 import { createServer } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Block } from './chain/block.js'
 import { Blockchain } from './chain/blockchain.js'
-import { attachWebSocketServer } from './websocket.js'
+import { attachWebSocketServer, CHAIN_REQUEST_LIMIT } from './websocket.js'
 
 describe('attachWebSocketServer', () => {
   it('connects to configured peers', async () => {
@@ -505,6 +505,110 @@ describe('attachWebSocketServer', () => {
     server.close()
   })
 
+  describe('peer reconnect backoff', () => {
+    // setImmediate stays real so socket I/O can be awaited while the reconnect timers are fake.
+    const waitUntil = (predicate: () => boolean): Promise<void> =>
+      new Promise((resolve) => {
+        const check = (): void => {
+          if (predicate()) {
+            resolve()
+          } else {
+            setImmediate(check)
+          }
+        }
+        check()
+      })
+
+    const listeningPeerServer = async (): Promise<{ peerServer: WebSocketServer; url: string }> => {
+      const peerServer = new WebSocketServer({ port: 0 })
+
+      await new Promise<void>((resolve) => {
+        peerServer.once('listening', () => resolve())
+      })
+
+      const address = peerServer.address()
+
+      if (!address || typeof address === 'string') {
+        throw new Error('Could not determine peer server port')
+      }
+
+      return { peerServer, url: `ws://localhost:${address.port}` }
+    }
+
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    it('waits longer after every failed attempt while a peer stays unreachable', async () => {
+      const server = createServer()
+      const { peerServer, url } = await listeningPeerServer()
+      await new Promise<void>((resolve) => {
+        peerServer.close(() => resolve())
+      })
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      vi.spyOn(Math, 'random').mockReturnValue(0)
+      vi.spyOn(console, 'info').mockImplementation(() => undefined)
+      let failures = 0
+      vi.spyOn(console, 'error').mockImplementation(() => {
+        failures += 1
+      })
+
+      const webSocketServer = attachWebSocketServer(server, [url])
+
+      for (const [attempt, delay] of [500, 1000, 2000].entries()) {
+        await waitUntil(() => failures === attempt + 1 && vi.getTimerCount() === 1)
+
+        await vi.advanceTimersByTimeAsync(delay - 1)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(vi.getTimerCount()).toBe(0)
+      }
+
+      await waitUntil(() => failures === 4)
+
+      webSocketServer.close()
+      expect(vi.getTimerCount()).toBe(0)
+      server.close()
+    })
+
+    it('starts over from the shortest delay after a connection succeeds', async () => {
+      const server = createServer()
+      const { peerServer, url } = await listeningPeerServer()
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      vi.spyOn(Math, 'random').mockReturnValue(0)
+      let opens = 0
+      vi.spyOn(console, 'info').mockImplementation((message: unknown) => {
+        if (message === `Connected to peer: ${url}`) {
+          opens += 1
+        }
+      })
+
+      const webSocketServer = attachWebSocketServer(server, [url])
+
+      for (const expectedOpens of [1, 2, 3]) {
+        await waitUntil(() => opens === expectedOpens)
+        for (const client of peerServer.clients) {
+          client.terminate()
+        }
+        await waitUntil(() => vi.getTimerCount() === 1)
+
+        await vi.advanceTimersByTimeAsync(499)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(vi.getTimerCount()).toBe(0)
+      }
+
+      webSocketServer.close()
+      peerServer.close()
+      server.close()
+    })
+  })
+
   it.each([
     ['an unknown type', { type: 'DROP_TABLES' }, 'unknown type'],
     [
@@ -552,6 +656,108 @@ describe('attachWebSocketServer', () => {
 
     consoleInfo.mockRestore()
     consoleWarn.mockRestore()
+    webSocketServer.close()
+    server.close()
+  })
+
+  it('answers at most the allowed number of CHAIN_REQUESTs in a burst from one socket', async () => {
+    const server = createServer()
+    const chain = new Blockchain().chain
+    const webSocketServer = attachWebSocketServer(server, [], { getChain: () => chain })
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+    const replies: string[] = []
+    socket.on('message', (data) => replies.push(data.toString()))
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    for (let request = 0; request < CHAIN_REQUEST_LIMIT * 4; request += 1) {
+      socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
+    }
+
+    await vi.waitFor(() => {
+      expect(consoleWarn).toHaveBeenCalledWith('Rate limited a CHAIN_REQUEST')
+    })
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 100)
+    })
+
+    expect(replies).toHaveLength(CHAIN_REQUEST_LIMIT)
+
+    socket.close()
+    consoleWarn.mockRestore()
+    webSocketServer.close()
+    server.close()
+  })
+
+  it('serializes the chain once until it changes', async () => {
+    const server = createServer()
+    const blockchain = new Blockchain()
+    const webSocketServer = attachWebSocketServer(server, [], {
+      getChain: () => [...blockchain.chain],
+    })
+    const stringify = vi.spyOn(JSON, 'stringify')
+    const chainResponsesSerialized = (): number =>
+      stringify.mock.calls.filter(
+        ([value]) =>
+          typeof value === 'object' &&
+          value !== null &&
+          'type' in value &&
+          value.type === 'CHAIN_RESPONSE',
+      ).length
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not determine server port')
+    }
+
+    const socket = new WebSocket(`ws://localhost:${address.port}`)
+    const replies: string[] = []
+    socket.on('message', (data) => replies.push(data.toString()))
+
+    await new Promise<void>((resolve) => {
+      socket.once('open', () => resolve())
+    })
+
+    socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
+    socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
+    await vi.waitFor(() => {
+      expect(replies).toHaveLength(2)
+    })
+
+    expect(chainResponsesSerialized()).toBe(1)
+
+    blockchain.addBlock([])
+    socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
+    await vi.waitFor(() => {
+      expect(replies).toHaveLength(3)
+    })
+
+    expect(chainResponsesSerialized()).toBe(2)
+    expect(JSON.parse(replies[2] ?? '')).toEqual(
+      JSON.parse(JSON.stringify({ type: 'CHAIN_RESPONSE', chain: blockchain.chain })),
+    )
+
+    stringify.mockRestore()
+    socket.close()
     webSocketServer.close()
     server.close()
   })

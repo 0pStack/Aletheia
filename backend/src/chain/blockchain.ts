@@ -1,11 +1,14 @@
 import { Block } from './block.js'
 import type { AccessEvent } from './access-event.js'
 import { findFirstInvalidBlockIndex, isValidIncomingChain } from './chain-validation.js'
+import type { TrustedNodeKeys } from './trusted-node-keys.js'
 
 export interface BlockchainOptions {
   batchSize?: number
   flushIntervalMs?: number
   chain?: Block[]
+  // Left out, any correctly signed event passes. The running node always sets it.
+  trustedKeys?: TrustedNodeKeys
   onBlockAdded?: (chain: Block[]) => void
   onNewBlock?: (block: Block) => void
   onFlushError?: (error: unknown, events: readonly AccessEvent[]) => void
@@ -22,6 +25,7 @@ export class Blockchain {
   private readonly onBlockAdded: ((chain: Block[]) => void) | undefined
   private readonly onNewBlock: ((block: Block) => void) | undefined
   private readonly onFlushError: BlockchainOptions['onFlushError']
+  private readonly trustedKeys: TrustedNodeKeys | undefined
 
   constructor(options: BlockchainOptions = {}) {
     const batchSize = options.batchSize ?? 1
@@ -35,6 +39,7 @@ export class Blockchain {
     this.onBlockAdded = options.onBlockAdded
     this.onNewBlock = options.onNewBlock
     this.onFlushError = options.onFlushError
+    this.trustedKeys = options.trustedKeys
     this.chain =
       options.chain && options.chain.length > 0 ? options.chain : [this.createGenesisBlock()]
   }
@@ -65,8 +70,14 @@ export class Blockchain {
     )
 
     this.chain.push(newBlock)
-    this.onBlockAdded?.(this.chain)
-    this.onNewBlock?.(newBlock)
+
+    // The block is already in our chain, so peers must hear about it even if the disk
+    // write fails; otherwise they only catch up on the next full sync.
+    try {
+      this.onBlockAdded?.(this.chain)
+    } finally {
+      this.onNewBlock?.(newBlock)
+    }
 
     return newBlock
   }
@@ -80,7 +91,7 @@ export class Blockchain {
 
     const candidateChain = [...this.chain, block]
 
-    if (findFirstInvalidBlockIndex(candidateChain) !== null) {
+    if (findFirstInvalidBlockIndex(candidateChain, this.trustedKeys) !== null) {
       return false
     }
 
@@ -110,13 +121,15 @@ export class Blockchain {
 
     const events = this.pending
     this.pending = []
+    const heightBefore = this.chain.length
 
     try {
       return this.addBlock(events)
     } catch (error) {
       // A block that reached the chain before a hook failed is written by the next save,
       // which stores the whole chain. Re-queuing it would record the events twice.
-      if (this.getLatestBlock().data !== events) {
+      const reachedChain = this.chain.length > heightBefore
+      if (!reachedChain) {
         this.pending = [...events, ...this.pending]
       }
       throw error
@@ -132,8 +145,16 @@ export class Blockchain {
       this.flush()
     } catch (error) {
       if (this.onFlushError) {
-        this.onFlushError(error, events)
-        return
+        try {
+          this.onFlushError(error, events)
+          return
+        } catch (handlerError) {
+          // Falls through so the original flush failure is still reported.
+          console.error(
+            'Chain flush error handler failed:',
+            handlerError instanceof Error ? handlerError.message : 'Unknown error',
+          )
+        }
       }
       console.error(
         'Deferred chain flush failed:',
@@ -165,7 +186,7 @@ export class Blockchain {
       return false
     }
 
-    if (!isValidIncomingChain(incoming, ourGenesis)) {
+    if (!isValidIncomingChain(incoming, ourGenesis, this.trustedKeys)) {
       return false
     }
 
@@ -188,7 +209,11 @@ export class Blockchain {
   }
 
   findFirstInvalidBlockIndex(): number | null {
-    return findFirstInvalidBlockIndex(this.chain)
+    return findFirstInvalidBlockIndex(this.chain, this.trustedKeys)
+  }
+
+  isValidThrough(position: number): boolean {
+    return findFirstInvalidBlockIndex(this.chain.slice(0, position + 1), this.trustedKeys) === null
   }
 
   isChainValid(): boolean {
