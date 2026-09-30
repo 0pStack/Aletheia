@@ -4,6 +4,7 @@ import { logAccessEvent } from './audit-logger.js'
 import { Blockchain } from './chain/blockchain.js'
 import type { KeyPair } from './chain/keypair.js'
 import { patientExists } from './notes/notes.js'
+import { parsePatientId } from './patients/patient-access.js'
 import type { UserRole } from './auth/auth.js'
 
 // The chain is put on app.locals by createApp. Read it defensively: a refusal must stay
@@ -32,8 +33,8 @@ function keyPairFor(req: Request): KeyPair | undefined {
 // anybody's history — writing it anyway would let a refused account push chosen noise
 // into a chosen patient's record, permanently, since the chain cannot be corrected.
 function refusedPatientId(req: Request): number | undefined {
-  const parsed = Number(req.params?.id)
-  if (!Number.isInteger(parsed) || parsed <= 0) return undefined
+  const parsed = parsePatientId(req.params?.id)
+  if (parsed === undefined) return undefined
 
   const db = dbFor(req)
   if (!db || !patientExists(db, parsed)) return undefined
