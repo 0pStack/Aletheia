@@ -266,7 +266,7 @@ All endpoints return HTTP status code matching the envelope state (200/201 on su
   }
   ```
 
-  A stub has **no `text` field at all** — the query never selects the text for a caller who may not read it. A `PATIENT` receives no stubs; whether they should is an open group decision (issue #83).
+  A stub has **no `text` field at all** — the query never selects the text for a caller who may not read it. A `PATIENT` receives no stubs. Their journal instead says once, with no dates or count, that a record may also contain notes written for staff only. The patient's access log already shows every "Wrote a note", so without that sentence a note written for staff would look like a missing note. The sentence explains the gap without sending the patient anything new (decided in #83).
 
 #### 6. `POST /api/patients/:id/notes`
 * **Access:** `DOCTOR`, `NURSE`, `CLINIC`
