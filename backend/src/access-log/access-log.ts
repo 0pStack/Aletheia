@@ -12,6 +12,7 @@ export interface AccessLogEntry {
   timestamp: string
   serverId: string
   blockIndex: number
+  isValid: boolean
 }
 
 function userNames(db: DatabaseType, userIds: readonly number[]): Map<number, string> {
@@ -32,15 +33,21 @@ export function collectAccessLog(
   blockchain: Blockchain,
   patientId: number,
 ): AccessLogEntry[] {
-  const found = blockchain.chain.flatMap((block) =>
+  const firstInvalidPosition = blockchain.findFirstInvalidBlockIndex()
+
+  const found = blockchain.chain.flatMap((block, position) =>
     block.data
       .filter((event) => event.patientId === patientId)
-      .map((event) => ({ event, blockIndex: block.index })),
+      .map((event) => ({
+        event,
+        blockIndex: block.index,
+        isValid: firstInvalidPosition === null || position < firstInvalidPosition,
+      })),
   )
 
   const names = userNames(db, [...new Set(found.map(({ event }) => event.userId))])
 
-  return found.map(({ event, blockIndex }) => ({
+  return found.map(({ event, blockIndex, isValid }) => ({
     eventId: event.id,
     userId: event.userId,
     userName: names.get(event.userId) ?? 'Unknown user',
@@ -49,5 +56,6 @@ export function collectAccessLog(
     timestamp: event.timestamp,
     serverId: event.serverId,
     blockIndex,
+    isValid,
   }))
 }

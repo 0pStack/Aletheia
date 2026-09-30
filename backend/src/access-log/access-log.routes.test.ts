@@ -19,6 +19,7 @@ const ENTRY_FIELDS = [
   'action',
   'blockIndex',
   'eventId',
+  'isValid',
   'role',
   'serverId',
   'timestamp',
@@ -93,6 +94,7 @@ describe('GET /api/patients/:id/access-log', () => {
       userName: 'Dr. Gregory House',
       role: 'DOCTOR',
       action: 'READ',
+      isValid: true,
     })
     expect(entry.timestamp).toMatch(ISO_DATE)
     expect(typeof entry.blockIndex).toBe('number')

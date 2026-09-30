@@ -81,6 +81,7 @@ describe('collectAccessLog', () => {
         timestamp: '2026-09-25T10:00:00.000Z',
         serverId: 'node-2',
         blockIndex: 1,
+        isValid: false,
       },
     ])
   })
@@ -160,6 +161,7 @@ describe('collectAccessLog', () => {
       'action',
       'blockIndex',
       'eventId',
+      'isValid',
       'role',
       'serverId',
       'timestamp',
