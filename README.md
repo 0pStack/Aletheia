@@ -142,7 +142,7 @@ SQLite, through `better-sqlite3`. Four tables; the medical data lives here and o
 | `patients` | name, personal number         | `personal_number` is unique and indexed                 |
 | `users`    | login, password hash, role    | `patient_id` links a `PATIENT` account to its record    |
 | `notes`    | note text, author, visibility | `PRIVATE` / `STAFF` / `ALL`, filtered in SQL per reader |
-| `sessions` | session store                 | defined and indexed, not yet wired up (issue #96)       |
+| `sessions` | login sessions                | expired rows are cleared when a new session is saved    |
 
 Passwords are hashed with `scrypt` and a per-user salt. Foreign keys are enforced (`PRAGMA foreign_keys = ON`), notes cascade with their patient, and a user who has written a note cannot be deleted.
 
