@@ -52,6 +52,7 @@ export function AccessLog({ patientId }: AccessLogProps) {
             {entry.userName} <span className={styles.role}>{ROLE_LABELS[entry.role]}</span>
           </p>
           <p className={styles.what}>
+            {entry.isValid ? '' : 'Unverified event: '}
             {ACTION_LABELS[entry.action]}
             <time dateTime={entry.timestamp}>{dateFormat.format(new Date(entry.timestamp))}</time>
           </p>
@@ -59,7 +60,11 @@ export function AccessLog({ patientId }: AccessLogProps) {
               chain, not in a table someone could quietly edit. */}
           <p className={styles.origin}>
             Recorded by {entry.serverId}, block #{entry.blockIndex}
-            <VerificationBadge eventId={entry.eventId} />
+            {entry.isValid ? (
+              <VerificationBadge eventId={entry.eventId} />
+            ) : (
+              <span>Unverified — block validation failed</span>
+            )}
           </p>
         </li>
       ))}

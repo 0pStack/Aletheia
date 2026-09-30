@@ -15,6 +15,7 @@ function toAccessLogEntry(entry: MockAccessLogEntry) {
     timestamp: entry.timestamp,
     serverId: entry.serverId,
     blockIndex: entry.blockIndex,
+    isValid: true,
   }
 }
 

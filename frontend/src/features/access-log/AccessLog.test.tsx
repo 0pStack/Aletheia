@@ -22,6 +22,39 @@ function renderJournal(path: string) {
 }
 
 describe('AccessLog', () => {
+  it('labels entries from invalid blocks as unverified', async () => {
+    setCurrentSessionUserId(DOCTOR_ID)
+    server.use(
+      http.get('*/api/patients/:id/access-log', () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              eventId: 'invalid-event',
+              userId: 1,
+              userName: 'Dr. Gregory House',
+              role: 'DOCTOR',
+              action: 'READ',
+              timestamp: '2026-01-10T09:00:00.000Z',
+              serverId: 'server-1',
+              blockIndex: 1,
+              isValid: false,
+            },
+          ],
+          error: null,
+        }),
+      ),
+    )
+
+    renderJournal('/patients/1')
+
+    const log = await screen.findByRole('list', { name: 'Access log' })
+    expect(log).toHaveTextContent('Unverified event: Opened the record')
+    expect(within(log).getByText('Unverified — block validation failed')).toBeInTheDocument()
+    expect(within(log).queryByText('Verified')).not.toBeInTheDocument()
+    expect(within(log).queryByText('Checking')).not.toBeInTheDocument()
+  })
+
   it('shows who has opened the record, alongside the journal', async () => {
     setCurrentSessionUserId(DOCTOR_ID)
 
@@ -107,6 +140,7 @@ describe('AccessLog', () => {
               timestamp: '2026-01-10T09:00:00.000Z',
               serverId: 'server-2',
               blockIndex: 4,
+              isValid: true,
             },
             {
               eventId: 'b',
@@ -117,6 +151,7 @@ describe('AccessLog', () => {
               timestamp: '2026-01-10T09:05:00.000Z',
               serverId: 'server-1',
               blockIndex: 5,
+              isValid: true,
             },
           ],
           error: null,
