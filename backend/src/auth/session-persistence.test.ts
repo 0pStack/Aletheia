@@ -72,6 +72,36 @@ describe('stored sessions', () => {
     expect(cookies).toEqual([])
   })
 
+  it('sets the Secure cookie behind a trusted HTTPS proxy', async () => {
+    vi.stubEnv('SESSION_COOKIE_SECURE', 'true')
+    vi.stubEnv('TRUST_PROXY', '1')
+
+    const res = await request(createApp({ db, keyPair }))
+      .post('/api/auth/login')
+      .set('X-Forwarded-Proto', 'https')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+
+    const cookies = [res.headers['set-cookie'] ?? []].flat()
+    expect(cookies).toHaveLength(1)
+    expect(cookies[0]).toContain('Secure')
+  })
+
+  it('does not accept one node’s cookie on another node, even with a shared secret', async () => {
+    vi.stubEnv('SESSION_SECRET', 'a-long-shared-secret-for-this-test')
+    const node1 = createApp({ db, keyPair, sessionCookieName: 'aletheia.sid.3001' })
+    const node2 = createApp({ db, keyPair, sessionCookieName: 'aletheia.sid.3002' })
+    const login = await request(node1)
+      .post('/api/auth/login')
+      .send({ username: 'doctor_dr_house', password: PASSWORD })
+    const renamed = [login.headers['set-cookie'] ?? []]
+      .flat()
+      .map((cookie) => cookie.replace('aletheia.sid.3001', 'aletheia.sid.3002'))
+
+    const res = await request(node2).get('/api/auth/session').set('Cookie', renamed)
+
+    expect(res.status).toBe(401)
+  })
+
   it('refuses to build the app in production without a session secret', () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('SESSION_SECRET', '')

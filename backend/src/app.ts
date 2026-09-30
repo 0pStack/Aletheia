@@ -8,6 +8,7 @@ import type { KeyPair } from './chain/keypair.js'
 import { SqliteSessionStore } from './auth/sqlite-session-store.js'
 import { resolveSecureCookie } from './config/session-cookie.js'
 import { resolveSessionSecret } from './config/session-secret.js'
+import { resolveTrustProxy } from './config/trust-proxy.js'
 import { db as defaultDb } from './db.js'
 import { ok } from './envelope.js'
 import { createNotesRouter } from './notes/notes.routes.js'
@@ -50,14 +51,19 @@ export function createApp(options: CreateAppOptions): Express {
   app.locals.db = db
   app.locals.keyPair = options.keyPair
 
+  app.set('trust proxy', resolveTrustProxy(process.env.TRUST_PROXY))
   app.use(express.json())
+
+  const sessionSecret = resolveSessionSecret(process.env.SESSION_SECRET, {
+    production: process.env.NODE_ENV === 'production',
+  })
 
   app.use(
     session({
       name: sessionCookieName,
-      secret: resolveSessionSecret(process.env.SESSION_SECRET, {
-        production: process.env.NODE_ENV === 'production',
-      }),
+      // Both local nodes read one sessions table, so each signs with its own key; a
+      // cookie from one node, renamed, does not verify on the other.
+      secret: `${sessionSecret}:${sessionCookieName}`,
       store: new SqliteSessionStore(db),
       resave: false,
       saveUninitialized: false,
