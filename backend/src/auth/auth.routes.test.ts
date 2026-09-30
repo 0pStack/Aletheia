@@ -1,42 +1,34 @@
-import Database, { type Database as DatabaseType } from 'better-sqlite3'
+import type { Database as DatabaseType } from 'better-sqlite3'
 import type { Express } from 'express'
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { generateKeyPair } from '../chain/keypair.js'
+import { createTestApp, PASSWORD } from '../test-support/test-app.js'
 import { LOGIN_ATTEMPT_LIMIT } from './auth.routes.js'
-import { hashPassword } from './auth.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
-const PASSWORD = 'Password123!'
 
 let db: DatabaseType
 let app: Express
 let annaPatientId: number
 
 beforeAll(() => {
-  db = new Database(':memory:')
-  db.pragma('foreign_keys = ON')
-  db.exec(readFileSync(SCHEMA_PATH, 'utf-8'))
+  const fixture = createTestApp({
+    patients: [{ name: 'Anna Andersson', personalNumber: '19850101-1234' }],
+    users: [
+      { username: 'doctor_dr_house', name: 'Dr. Gregory House', role: 'DOCTOR' },
+      {
+        username: 'patient_anna',
+        name: 'Anna Andersson',
+        role: 'PATIENT',
+        patientPersonalNumber: '19850101-1234',
+      },
+      { username: 'unauth_user', name: 'Eve Stranded', role: 'UNAUTHORIZED' },
+    ],
+  })
 
-  const insertPatient = db.prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
-  const insertUser = db.prepare(
-    'INSERT INTO users (username, password_hash, name, role, patient_id) VALUES (?, ?, ?, ?, ?)',
-  )
-
-  annaPatientId = Number(insertPatient.run('Anna Andersson', '19850101-1234').lastInsertRowid)
-
-  const passwordHash = hashPassword(PASSWORD)
-
-  insertUser.run('doctor_dr_house', passwordHash, 'Dr. Gregory House', 'DOCTOR', null)
-  insertUser.run('patient_anna', passwordHash, 'Anna Andersson', 'PATIENT', annaPatientId)
-  insertUser.run('unauth_user', passwordHash, 'Eve Stranded', 'UNAUTHORIZED', null)
-
-  app = createApp({ db, keyPair: generateKeyPair() })
+  db = fixture.db
+  app = fixture.app
+  annaPatientId = fixture.patientId('19850101-1234')
 })
 
 afterAll(() => {

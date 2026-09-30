@@ -1,47 +1,38 @@
-import Database, { type Database as DatabaseType } from 'better-sqlite3'
+import type { Database as DatabaseType } from 'better-sqlite3'
 import type { Express } from 'express'
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createApp } from '../app.js'
-import { hashPassword } from '../auth/auth.js'
-import { generateKeyPair } from '../chain/keypair.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
-const PASSWORD = 'Password123!'
+import { createTestApp, PASSWORD } from '../test-support/test-app.js'
 
 let db: DatabaseType
 let app: Express
 let annaId: number
 
 beforeAll(() => {
-  db = new Database(':memory:')
-  db.pragma('foreign_keys = ON')
-  db.exec(readFileSync(SCHEMA_PATH, 'utf-8'))
+  const fixture = createTestApp({
+    patients: [
+      { name: 'Anna Andersson', personalNumber: '19850101-1234' },
+      { name: 'Bengt Berg', personalNumber: '19700512-5678' },
+      { name: 'Cecilia Carlsson', personalNumber: '19921130-9012' },
+      { name: '100% Test Patient', personalNumber: '19600101-0001' },
+    ],
+    users: [
+      { username: 'doctor_dr_house', name: 'Dr. Gregory House', role: 'DOCTOR' },
+      { username: 'nurse_jackie', name: 'Jackie Peyton', role: 'NURSE' },
+      { username: 'clinic_admin', name: 'City Central Clinic', role: 'CLINIC' },
+      {
+        username: 'patient_anna',
+        name: 'Anna Andersson',
+        role: 'PATIENT',
+        patientPersonalNumber: '19850101-1234',
+      },
+      { username: 'unauth_user', name: 'Eve Stranded', role: 'UNAUTHORIZED' },
+    ],
+  })
 
-  const insertPatient = db.prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
-  const insertUser = db.prepare(
-    `INSERT INTO users (username, password_hash, name, role, patient_id)
-     VALUES (?, ?, ?, ?, ?)`,
-  )
-
-  annaId = Number(insertPatient.run('Anna Andersson', '19850101-1234').lastInsertRowid)
-  insertPatient.run('Bengt Berg', '19700512-5678')
-  insertPatient.run('Cecilia Carlsson', '19921130-9012')
-  insertPatient.run('100% Test Patient', '19600101-0001')
-
-  const passwordHash = hashPassword(PASSWORD)
-
-  insertUser.run('doctor_dr_house', passwordHash, 'Dr. Gregory House', 'DOCTOR', null)
-  insertUser.run('nurse_jackie', passwordHash, 'Jackie Peyton', 'NURSE', null)
-  insertUser.run('clinic_admin', passwordHash, 'City Central Clinic', 'CLINIC', null)
-  insertUser.run('patient_anna', passwordHash, 'Anna Andersson', 'PATIENT', annaId)
-  insertUser.run('unauth_user', passwordHash, 'Eve Stranded', 'UNAUTHORIZED', null)
-
-  app = createApp({ db, keyPair: generateKeyPair() })
+  db = fixture.db
+  app = fixture.app
+  annaId = fixture.patientId('19850101-1234')
 })
 
 afterAll(() => {
