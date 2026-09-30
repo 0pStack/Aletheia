@@ -42,6 +42,7 @@ describe('JournalPage', () => {
     expect(screen.getByText(/private notes you wrote yourself/i)).toBeInTheDocument()
     expect(screen.getByText('Staff only')).toBeInTheDocument()
     expect(screen.getByText('Private')).toBeInTheDocument()
+    expect(screen.queryByText(/notes written for staff only/i)).not.toBeInTheDocument()
   })
 
   it('shows a patient only what the server shared, without visibility labels', async () => {
@@ -53,6 +54,7 @@ describe('JournalPage', () => {
     expect(await screen.findByText(/mild fever and sore throat/i)).toBeInTheDocument()
     expect(screen.getByText(/your journal/i)).toBeInTheDocument()
     expect(screen.getByText(/shared with you/i)).toBeInTheDocument()
+    expect(screen.getByText(/notes written for staff only/i)).toBeInTheDocument()
     // The server never sends these, so the browser has nothing to hide.
     expect(screen.queryByText(/elevated heart rate/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/differential diagnosis/i)).not.toBeInTheDocument()

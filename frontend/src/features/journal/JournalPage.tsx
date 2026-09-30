@@ -78,7 +78,7 @@ export function JournalPage() {
           <p className={styles.scope}>
             {access.isStaff
               ? 'Shared and staff notes, plus private notes you wrote yourself.'
-              : 'Notes your care team has shared with you.'}
+              : 'Notes your care team has shared with you. A record may also contain notes written for staff only.'}
           </p>
           {access.canWriteNotes && <NoteComposer patientId={patientId} />}
           {notes.length === 0 ? (
