@@ -4,6 +4,13 @@ import type { Block } from './chain/block.js'
 import { peerReconnectDelay } from './peer-reconnect.js'
 import { parseWebSocketMessage, type WebSocketMessage } from './websocket-message.js'
 import { MAX_INCOMING_CHAIN_BLOCKS, MAX_INCOMING_CHAIN_EVENTS } from './chain/chain-validation.js'
+import {
+  createPeerChallenge,
+  isPeerChallenge,
+  signPeerChallenge,
+  verifyPeerChallenge,
+  type PeerIdentity,
+} from './peer-auth.js'
 
 export { WEB_SOCKET_MESSAGE_TYPES, type WebSocketMessageType } from './websocket-message.js'
 
@@ -28,6 +35,14 @@ export const MAX_WEB_SOCKET_PAYLOAD_BYTES =
   MAX_INCOMING_CHAIN_BLOCKS * BLOCK_JSON_BUDGET_BYTES
 
 const WS_ERR_MESSAGE_TOO_BIG = 'WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'
+const WS_POLICY_VIOLATION = 1008
+export const MAX_UNAUTHENTICATED_MESSAGE_LENGTH = 4096
+
+const PEER_ONLY_MESSAGE_TYPES: ReadonlySet<WebSocketMessage['type']> = new Set([
+  'NEW_BLOCK',
+  'CHAIN_REQUEST',
+  'CHAIN_RESPONSE',
+])
 
 function isOversizeMessageError(error: Error): boolean {
   return 'code' in error && error.code === WS_ERR_MESSAGE_TOO_BIG
@@ -59,9 +74,14 @@ export function attachWebSocketServer(
   server: Server,
   peers: string[] = [],
   handlers: PeerHandlers = {},
+  identity?: PeerIdentity,
 ): BroadcastWebSocketServer {
   const sockets = new Set<WebSocket>()
   const peerSockets = new Set<WebSocket>()
+  const authenticatedPeers = new WeakSet<WebSocket>()
+  const pendingChallenges = new WeakMap<WebSocket, string>()
+  const awaitingChallenge = new WeakSet<WebSocket>()
+  const challengedSockets = new WeakSet<WebSocket>()
   const awaitingChain = new WeakSet<WebSocket>()
   const reconnectTimers = new Set<ReturnType<typeof setTimeout>>()
   const chainRequestTimes = new WeakMap<WebSocket, readonly number[]>()
@@ -121,8 +141,71 @@ export function attachWebSocketServer(
     return cachedChainResponse.payload
   }
 
+  // Browsers share this server to receive broadcasts, so an unknown socket may connect, but
+  // only a peer we dialed or one that proved it holds a trusted node key may talk chain.
+  const isTrustedPeer = (socket: WebSocket): boolean =>
+    peerSockets.has(socket) || authenticatedPeers.has(socket)
+
+  // One challenge per socket: a wrong answer closes it, a right one needs no second.
+  const issueChallenge = (socket: WebSocket): void => {
+    if (challengedSockets.has(socket)) {
+      console.warn('Ignored a repeated AUTH_REQUEST')
+      return
+    }
+
+    challengedSockets.add(socket)
+    const challenge = createPeerChallenge()
+    pendingChallenges.set(socket, challenge)
+    send(socket, { type: 'AUTH_CHALLENGE', challenge })
+  }
+
+  const answerChallenge = (socket: WebSocket, challenge: string): void => {
+    if (!identity || !awaitingChallenge.delete(socket) || !isPeerChallenge(challenge)) {
+      console.warn('Ignored an unexpected AUTH_CHALLENGE')
+      return
+    }
+
+    send(socket, {
+      type: 'AUTH_RESPONSE',
+      publicKey: identity.keyPair.publicKey,
+      signature: signPeerChallenge(challenge, identity.keyPair.privateKey),
+    })
+    requestChain(socket)
+  }
+
+  const checkChallengeResponse = (
+    socket: WebSocket,
+    publicKey: string,
+    signature: string,
+  ): void => {
+    const challenge = pendingChallenges.get(socket)
+    pendingChallenges.delete(socket)
+
+    if (
+      challenge &&
+      identity &&
+      verifyPeerChallenge(challenge, publicKey, signature, identity.trustedKeys)
+    ) {
+      authenticatedPeers.add(socket)
+      console.info('Peer authenticated')
+      return
+    }
+
+    console.warn('Refused a peer handshake that did not verify against a trusted key')
+    socket.close(WS_POLICY_VIOLATION, 'Untrusted peer')
+  }
+
   const handleMessage = (socket: WebSocket, data: RawData): void => {
-    const result = parseWebSocketMessage(data.toString())
+    const raw = data.toString()
+
+    // Only a trusted peer ever needs to send a chain; the handshake itself is a few hundred
+    // bytes, so a stranger's large message is dropped before it costs a parse.
+    if (!isTrustedPeer(socket) && raw.length > MAX_UNAUTHENTICATED_MESSAGE_LENGTH) {
+      console.warn('Ignored an oversized message from an unauthenticated client')
+      return
+    }
+
+    const result = parseWebSocketMessage(raw)
 
     if (!result.ok) {
       console.warn(`Invalid WebSocket message: ${result.reason}`)
@@ -132,7 +215,21 @@ export function attachWebSocketServer(
     const message = result.message
     console.info(`WebSocket message received: ${message.type}`)
 
+    if (PEER_ONLY_MESSAGE_TYPES.has(message.type) && !isTrustedPeer(socket)) {
+      console.warn(`Ignored ${message.type} from an unauthenticated client`)
+      return
+    }
+
     switch (message.type) {
+      case 'AUTH_REQUEST':
+        issueChallenge(socket)
+        return
+      case 'AUTH_CHALLENGE':
+        answerChallenge(socket, message.challenge)
+        return
+      case 'AUTH_RESPONSE':
+        checkChallengeResponse(socket, message.publicKey, message.signature)
+        return
       case 'NEW_BLOCK':
         handlers.onNewBlock?.(message.block, requestChainFromPeers)
         return
@@ -165,7 +262,8 @@ export function attachWebSocketServer(
     socket.on('open', () => {
       opened = true
       console.info(`Connected to peer: ${peer}`)
-      requestChain(socket)
+      awaitingChallenge.add(socket)
+      send(socket, { type: 'AUTH_REQUEST' })
     })
 
     socket.on('message', (data) => handleMessage(socket, data))
