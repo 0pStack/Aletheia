@@ -1,19 +1,11 @@
-import Database, { type Database as DatabaseType } from 'better-sqlite3'
+import type { Database as DatabaseType } from 'better-sqlite3'
 import type { Express } from 'express'
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.js'
-import { hashPassword } from './auth/auth.js'
 import { verifyAccessEvent } from './chain/access-event-signing.js'
 import { Blockchain } from './chain/blockchain.js'
-import { generateKeyPair } from './chain/keypair.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const SCHEMA_PATH = join(__dirname, '../db/schema.sql')
-const PASSWORD = 'Password123!'
+import { createTestApp, PASSWORD } from './test-support/test-app.js'
 
 let db: DatabaseType
 let app: Express
@@ -27,28 +19,18 @@ async function loginAs(username: string) {
 }
 
 beforeAll(() => {
-  db = new Database(':memory:')
-  db.pragma('foreign_keys = ON')
-  db.exec(readFileSync(SCHEMA_PATH, 'utf-8'))
+  const fixture = createTestApp({
+    patients: [{ name: 'Anna Andersson', personalNumber: '19850101-1234' }],
+    users: [
+      { username: 'unauth_user', name: 'Eve Stranded', role: 'UNAUTHORIZED' },
+      { username: 'doctor_dr_house', name: 'Dr. Gregory House', role: 'DOCTOR' },
+    ],
+  })
 
-  patientId = Number(
-    db
-      .prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
-      .run('Anna Andersson', '19850101-1234').lastInsertRowid,
-  )
-
-  for (const [username, name, role] of [
-    ['unauth_user', 'Eve Stranded', 'UNAUTHORIZED'],
-    ['doctor_dr_house', 'Dr. Gregory House', 'DOCTOR'],
-  ]) {
-    db.prepare(
-      `INSERT INTO users (username, password_hash, name, role, patient_id)
-       VALUES (?, ?, ?, ?, NULL)`,
-    ).run(username, hashPassword(PASSWORD), name, role)
-  }
-
-  blockchain = new Blockchain()
-  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
+  db = fixture.db
+  app = fixture.app
+  blockchain = fixture.blockchain
+  patientId = fixture.patientId('19850101-1234')
 })
 
 afterAll(() => {
