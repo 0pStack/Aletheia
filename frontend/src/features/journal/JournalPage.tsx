@@ -33,7 +33,7 @@ export function JournalPage() {
   const patientId = parsePatientId(useParams().patientId)
   const viewer = useSession().data
   const detail = usePatientDetail(patientId)
-  useLiveAccessLog(patientId)
+  useLiveAccessLog(patientId, viewer?.id ?? null)
 
   if (patientId === null) return <PatientNotFound />
 
