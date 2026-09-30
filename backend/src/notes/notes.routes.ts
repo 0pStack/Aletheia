@@ -4,6 +4,7 @@ import { logAccessEvent } from '../audit-logger.js'
 import type { Blockchain } from '../chain/blockchain.js'
 import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
+import { parsePatientId } from '../patients/patient-access.js'
 import { requireRole } from '../rbac.js'
 import { createNote, patientExists, toNoteResponse } from './notes.js'
 
@@ -16,7 +17,7 @@ export function createNotesRouter(
 
   router.post('/:id/notes', requireRole('DOCTOR', 'NURSE', 'CLINIC'), (req, res) => {
     const user = req.session.user
-    const patientId = Number(req.params.id)
+    const patientId = parsePatientId(req.params.id)
     const body: unknown = req.body
 
     const { text, visibility } =
@@ -29,8 +30,7 @@ export function createNotesRouter(
 
     if (
       !user ||
-      !Number.isInteger(patientId) ||
-      patientId <= 0 ||
+      patientId === undefined ||
       typeof text !== 'string' ||
       text.trim() === '' ||
       (visibility !== 'PRIVATE' && visibility !== 'STAFF' && visibility !== 'ALL')
