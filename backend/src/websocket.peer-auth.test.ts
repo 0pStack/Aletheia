@@ -11,7 +11,11 @@ import {
   requestChallenge,
   testPeerIdentity,
 } from './test-support/peer-handshake.js'
-import { attachWebSocketServer, type BroadcastWebSocketServer } from './websocket.js'
+import {
+  attachWebSocketServer,
+  MAX_UNAUTHENTICATED_MESSAGE_LENGTH,
+  type BroadcastWebSocketServer,
+} from './websocket.js'
 
 const WS_POLICY_VIOLATION = 1008
 
@@ -182,6 +186,47 @@ describe('inbound peer authentication', () => {
     webSocketServers[0]?.broadcast({ type: 'NEW_BLOCK', block: { index: 1 } })
 
     expect((await received).type).toBe('NEW_BLOCK')
+  })
+
+  it('drops a large message from an unauthenticated client before parsing it', async () => {
+    const onChain = vi.fn()
+    const port = await startNode({ onChain })
+    const socket = await client(port)
+    const parse = vi.spyOn(JSON, 'parse')
+
+    socket.send(
+      JSON.stringify({
+        type: 'CHAIN_RESPONSE',
+        chain: [],
+        padding: 'x'.repeat(MAX_UNAUTHENTICATED_MESSAGE_LENGTH),
+      }),
+    )
+
+    await vi.waitFor(() => {
+      expect(consoleWarn).toHaveBeenCalledWith(
+        'Ignored an oversized message from an unauthenticated client',
+      )
+    })
+    expect(parse).not.toHaveBeenCalled()
+    expect(onChain).not.toHaveBeenCalled()
+  })
+
+  it('hands out one challenge per socket', async () => {
+    const port = await startNode()
+    const socket = await client(port)
+    const challenges: string[] = []
+    socket.on('message', (data) => challenges.push(data.toString()))
+
+    for (let request = 0; request < 5; request += 1) {
+      socket.send(JSON.stringify({ type: 'AUTH_REQUEST' }))
+    }
+
+    await vi.waitFor(() => {
+      expect(consoleWarn).toHaveBeenCalledTimes(4)
+    })
+    expect(consoleWarn).toHaveBeenCalledWith('Ignored a repeated AUTH_REQUEST')
+    await settle()
+    expect(challenges).toHaveLength(1)
   })
 
   it('answers only the one challenge it asked for', async () => {

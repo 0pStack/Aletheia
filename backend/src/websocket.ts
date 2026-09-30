@@ -36,6 +36,7 @@ export const MAX_WEB_SOCKET_PAYLOAD_BYTES =
 
 const WS_ERR_MESSAGE_TOO_BIG = 'WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'
 const WS_POLICY_VIOLATION = 1008
+export const MAX_UNAUTHENTICATED_MESSAGE_LENGTH = 4096
 
 const PEER_ONLY_MESSAGE_TYPES: ReadonlySet<WebSocketMessage['type']> = new Set([
   'NEW_BLOCK',
@@ -80,6 +81,7 @@ export function attachWebSocketServer(
   const authenticatedPeers = new WeakSet<WebSocket>()
   const pendingChallenges = new WeakMap<WebSocket, string>()
   const awaitingChallenge = new WeakSet<WebSocket>()
+  const challengedSockets = new WeakSet<WebSocket>()
   const awaitingChain = new WeakSet<WebSocket>()
   const reconnectTimers = new Set<ReturnType<typeof setTimeout>>()
   const chainRequestTimes = new WeakMap<WebSocket, readonly number[]>()
@@ -144,7 +146,14 @@ export function attachWebSocketServer(
   const isTrustedPeer = (socket: WebSocket): boolean =>
     peerSockets.has(socket) || authenticatedPeers.has(socket)
 
+  // One challenge per socket: a wrong answer closes it, a right one needs no second.
   const issueChallenge = (socket: WebSocket): void => {
+    if (challengedSockets.has(socket)) {
+      console.warn('Ignored a repeated AUTH_REQUEST')
+      return
+    }
+
+    challengedSockets.add(socket)
     const challenge = createPeerChallenge()
     pendingChallenges.set(socket, challenge)
     send(socket, { type: 'AUTH_CHALLENGE', challenge })
@@ -187,7 +196,16 @@ export function attachWebSocketServer(
   }
 
   const handleMessage = (socket: WebSocket, data: RawData): void => {
-    const result = parseWebSocketMessage(data.toString())
+    const raw = data.toString()
+
+    // Only a trusted peer ever needs to send a chain; the handshake itself is a few hundred
+    // bytes, so a stranger's large message is dropped before it costs a parse.
+    if (!isTrustedPeer(socket) && raw.length > MAX_UNAUTHENTICATED_MESSAGE_LENGTH) {
+      console.warn('Ignored an oversized message from an unauthenticated client')
+      return
+    }
+
+    const result = parseWebSocketMessage(raw)
 
     if (!result.ok) {
       console.warn(`Invalid WebSocket message: ${result.reason}`)
