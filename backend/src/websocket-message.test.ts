@@ -36,6 +36,25 @@ describe('parseWebSocketMessage', () => {
     expect(result.message.chain[0]).toBeInstanceOf(Block)
   })
 
+  it('accepts an AUTH_REQUEST', () => {
+    expect(parseWebSocketMessage(JSON.stringify({ type: 'AUTH_REQUEST' }))).toEqual({
+      ok: true,
+      message: { type: 'AUTH_REQUEST' },
+    })
+  })
+
+  it('accepts an AUTH_CHALLENGE with a string challenge', () => {
+    expect(
+      parseWebSocketMessage(JSON.stringify({ type: 'AUTH_CHALLENGE', challenge: 'abc' })),
+    ).toEqual({ ok: true, message: { type: 'AUTH_CHALLENGE', challenge: 'abc' } })
+  })
+
+  it('accepts an AUTH_RESPONSE with a public key and signature', () => {
+    const message = { type: 'AUTH_RESPONSE', publicKey: 'key', signature: 'sig' }
+
+    expect(parseWebSocketMessage(JSON.stringify(message))).toEqual({ ok: true, message })
+  })
+
   it.each([
     ['invalid JSON', 'not json', 'invalid JSON'],
     ['a non-object', JSON.stringify(42), 'not an object'],
@@ -59,6 +78,26 @@ describe('parseWebSocketMessage', () => {
       'a CHAIN_RESPONSE with a wrong-shape block',
       JSON.stringify({ type: 'CHAIN_RESPONSE', chain: [{ index: 0 }] }),
       'malformed CHAIN_RESPONSE',
+    ],
+    [
+      'an AUTH_CHALLENGE without a challenge',
+      JSON.stringify({ type: 'AUTH_CHALLENGE' }),
+      'malformed AUTH_CHALLENGE',
+    ],
+    [
+      'an oversized AUTH_CHALLENGE',
+      JSON.stringify({ type: 'AUTH_CHALLENGE', challenge: 'x'.repeat(10_000) }),
+      'malformed AUTH_CHALLENGE',
+    ],
+    [
+      'an AUTH_RESPONSE with a non-string signature',
+      JSON.stringify({ type: 'AUTH_RESPONSE', publicKey: 'key', signature: 7 }),
+      'malformed AUTH_RESPONSE',
+    ],
+    [
+      'an oversized AUTH_RESPONSE public key',
+      JSON.stringify({ type: 'AUTH_RESPONSE', publicKey: 'x'.repeat(10_000), signature: 'sig' }),
+      'malformed AUTH_RESPONSE',
     ],
   ])('rejects %s', (_label, raw, reason) => {
     expect(parseWebSocketMessage(raw)).toEqual({ ok: false, reason })

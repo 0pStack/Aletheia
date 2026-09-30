@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Blockchain } from './chain/blockchain.js'
 import { createChainSyncHandlers } from './peer-sync.js'
+import { testPeerIdentity } from './test-support/peer-handshake.js'
 import { attachWebSocketServer, type BroadcastWebSocketServer } from './websocket.js'
 
 interface TestNode {
@@ -14,7 +15,12 @@ interface TestNode {
 
 async function startNode(blockchain: Blockchain, peers: string[] = []): Promise<TestNode> {
   const server = createServer()
-  const webSocketServer = attachWebSocketServer(server, peers, createChainSyncHandlers(blockchain))
+  const webSocketServer = attachWebSocketServer(
+    server,
+    peers,
+    createChainSyncHandlers(blockchain),
+    testPeerIdentity,
+  )
 
   await new Promise<void>((resolve) => {
     server.listen(0, () => resolve())

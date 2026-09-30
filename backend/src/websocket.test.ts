@@ -3,6 +3,8 @@ import { WebSocket, WebSocketServer } from 'ws'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Block } from './chain/block.js'
 import { Blockchain } from './chain/blockchain.js'
+import { createPeerChallenge } from './peer-auth.js'
+import { authenticateAsPeer, testPeerIdentity } from './test-support/peer-handshake.js'
 import { attachWebSocketServer, CHAIN_REQUEST_LIMIT } from './websocket.js'
 
 describe('attachWebSocketServer', () => {
@@ -244,7 +246,7 @@ describe('attachWebSocketServer', () => {
   it('passes a received NEW_BLOCK to the handler', async () => {
     const server = createServer()
     const onNewBlock = vi.fn()
-    const webSocketServer = attachWebSocketServer(server, [], { onNewBlock })
+    const webSocketServer = attachWebSocketServer(server, [], { onNewBlock }, testPeerIdentity)
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
@@ -261,6 +263,8 @@ describe('attachWebSocketServer', () => {
     await new Promise<void>((resolve) => {
       socket.once('open', () => resolve())
     })
+
+    await authenticateAsPeer(socket)
 
     const block = {
       index: 1,
@@ -292,7 +296,12 @@ describe('attachWebSocketServer', () => {
   it('answers a CHAIN_REQUEST with its chain', async () => {
     const server = createServer()
     const chain = new Blockchain().chain
-    const webSocketServer = attachWebSocketServer(server, [], { getChain: () => chain })
+    const webSocketServer = attachWebSocketServer(
+      server,
+      [],
+      { getChain: () => chain },
+      testPeerIdentity,
+    )
 
     await new Promise<void>((resolve) => {
       server.listen(0, () => resolve())
@@ -309,6 +318,8 @@ describe('attachWebSocketServer', () => {
     await new Promise<void>((resolve) => {
       socket.once('open', () => resolve())
     })
+
+    await authenticateAsPeer(socket)
 
     const reply = new Promise<string>((resolve) => {
       socket.once('message', (data) => resolve(data.toString()))
@@ -334,7 +345,12 @@ describe('attachWebSocketServer', () => {
       const server = createServer()
       const onChain = vi.fn()
       const onNewBlock = vi.fn((_block: Block, requestChain: () => void) => requestChain())
-      const webSocketServer = attachWebSocketServer(server, [], { onChain, onNewBlock })
+      const webSocketServer = attachWebSocketServer(
+        server,
+        [],
+        { onChain, onNewBlock },
+        testPeerIdentity,
+      )
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
       const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
       const forged = new Blockchain()
@@ -355,6 +371,8 @@ describe('attachWebSocketServer', () => {
       await new Promise<void>((resolve) => {
         socket.once('open', () => resolve())
       })
+
+      await authenticateAsPeer(socket)
 
       if (sendsNewBlockFirst) {
         socket.send(JSON.stringify({ type: 'NEW_BLOCK', block: forged.getLatestBlock() }))
@@ -381,7 +399,11 @@ describe('attachWebSocketServer', () => {
 
     peerServer.on('connection', (socket) => {
       socket.on('message', (data) => {
-        if (JSON.parse(data.toString()).type === 'CHAIN_REQUEST') {
+        const { type } = JSON.parse(data.toString())
+        if (type === 'AUTH_REQUEST') {
+          socket.send(JSON.stringify({ type: 'AUTH_CHALLENGE', challenge: createPeerChallenge() }))
+        }
+        if (type === 'CHAIN_REQUEST') {
           socket.send(JSON.stringify({ type: 'CHAIN_RESPONSE', chain }))
         }
       })
@@ -398,9 +420,12 @@ describe('attachWebSocketServer', () => {
     }
 
     const onChain = vi.fn()
-    const webSocketServer = attachWebSocketServer(server, [`ws://localhost:${address.port}`], {
-      onChain,
-    })
+    const webSocketServer = attachWebSocketServer(
+      server,
+      [`ws://localhost:${address.port}`],
+      { onChain },
+      testPeerIdentity,
+    )
 
     await vi.waitFor(() => {
       expect(onChain).toHaveBeenCalledOnce()
@@ -663,7 +688,12 @@ describe('attachWebSocketServer', () => {
   it('answers at most the allowed number of CHAIN_REQUESTs in a burst from one socket', async () => {
     const server = createServer()
     const chain = new Blockchain().chain
-    const webSocketServer = attachWebSocketServer(server, [], { getChain: () => chain })
+    const webSocketServer = attachWebSocketServer(
+      server,
+      [],
+      { getChain: () => chain },
+      testPeerIdentity,
+    )
     const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
     await new Promise<void>((resolve) => {
@@ -677,12 +707,14 @@ describe('attachWebSocketServer', () => {
     }
 
     const socket = new WebSocket(`ws://localhost:${address.port}`)
-    const replies: string[] = []
-    socket.on('message', (data) => replies.push(data.toString()))
 
     await new Promise<void>((resolve) => {
       socket.once('open', () => resolve())
     })
+
+    await authenticateAsPeer(socket)
+    const replies: string[] = []
+    socket.on('message', (data) => replies.push(data.toString()))
 
     for (let request = 0; request < CHAIN_REQUEST_LIMIT * 4; request += 1) {
       socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
@@ -706,9 +738,12 @@ describe('attachWebSocketServer', () => {
   it('serializes the chain once until it changes', async () => {
     const server = createServer()
     const blockchain = new Blockchain()
-    const webSocketServer = attachWebSocketServer(server, [], {
-      getChain: () => [...blockchain.chain],
-    })
+    const webSocketServer = attachWebSocketServer(
+      server,
+      [],
+      { getChain: () => [...blockchain.chain] },
+      testPeerIdentity,
+    )
     const stringify = vi.spyOn(JSON, 'stringify')
     const chainResponsesSerialized = (): number =>
       stringify.mock.calls.filter(
@@ -730,12 +765,14 @@ describe('attachWebSocketServer', () => {
     }
 
     const socket = new WebSocket(`ws://localhost:${address.port}`)
-    const replies: string[] = []
-    socket.on('message', (data) => replies.push(data.toString()))
 
     await new Promise<void>((resolve) => {
       socket.once('open', () => resolve())
     })
+
+    await authenticateAsPeer(socket)
+    const replies: string[] = []
+    socket.on('message', (data) => replies.push(data.toString()))
 
     socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))
     socket.send(JSON.stringify({ type: 'CHAIN_REQUEST' }))

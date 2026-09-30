@@ -5,6 +5,7 @@ import { signAccessEvent } from './chain/access-event-signing.js'
 import { Block } from './chain/block.js'
 import { MAX_INCOMING_CHAIN_BLOCKS, MAX_INCOMING_CHAIN_EVENTS } from './chain/chain-validation.js'
 import { generateKeyPair } from './chain/keypair.js'
+import { testPeerIdentity } from './test-support/peer-handshake.js'
 import { MAX_WEB_SOCKET_PAYLOAD_BYTES, attachWebSocketServer } from './websocket.js'
 
 const OLD_PAYLOAD_LIMIT_BYTES = 5 * 1024 * 1024
@@ -67,15 +68,25 @@ describe('a chain at the incoming size caps', () => {
     const serverA = createServer()
     const serverB = createServer()
     const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined)
-    const nodeA = attachWebSocketServer(serverA, [], { getChain: () => chainAtCaps })
+    const nodeA = attachWebSocketServer(
+      serverA,
+      [],
+      { getChain: () => chainAtCaps },
+      testPeerIdentity,
+    )
     const portA = await listen(serverA)
     let receivedBlocks: number | undefined
 
-    const nodeB = attachWebSocketServer(serverB, [`ws://localhost:${portA}`], {
-      onChain: (chain) => {
-        receivedBlocks = chain.length
+    const nodeB = attachWebSocketServer(
+      serverB,
+      [`ws://localhost:${portA}`],
+      {
+        onChain: (chain) => {
+          receivedBlocks = chain.length
+        },
       },
-    })
+      testPeerIdentity,
+    )
 
     await vi.waitFor(
       () => {
