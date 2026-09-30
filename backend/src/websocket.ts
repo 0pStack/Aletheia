@@ -3,6 +3,7 @@ import { WebSocket, WebSocketServer, type RawData } from 'ws'
 import type { Block } from './chain/block.js'
 import { peerReconnectDelay } from './peer-reconnect.js'
 import { parseWebSocketMessage, type WebSocketMessage } from './websocket-message.js'
+import { MAX_INCOMING_CHAIN_BLOCKS, MAX_INCOMING_CHAIN_EVENTS } from './chain/chain-validation.js'
 
 export { WEB_SOCKET_MESSAGE_TYPES, type WebSocketMessageType } from './websocket-message.js'
 
@@ -19,9 +20,12 @@ export interface PeerHandlers {
 export const CHAIN_REQUEST_LIMIT = 5
 const CHAIN_REQUEST_WINDOW_MS = 10_000
 
-// A signed block serialises to about 0.7 KB, so a CHAIN_RESPONSE fits roughly
-// 7,000 blocks, while a peer can no longer make us buffer and JSON.parse ws's 100 MiB default.
-export const MAX_WEB_SOCKET_PAYLOAD_BYTES = 5 * 1024 * 1024
+const EVENT_JSON_BUDGET_BYTES = 1024
+const BLOCK_JSON_BUDGET_BYTES = 512
+
+export const MAX_WEB_SOCKET_PAYLOAD_BYTES =
+  MAX_INCOMING_CHAIN_EVENTS * EVENT_JSON_BUDGET_BYTES +
+  MAX_INCOMING_CHAIN_BLOCKS * BLOCK_JSON_BUDGET_BYTES
 
 const WS_ERR_MESSAGE_TOO_BIG = 'WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'
 
