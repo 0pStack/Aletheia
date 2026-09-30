@@ -63,13 +63,14 @@ _Still to add before hand-in: a journal with its access log, the same record see
 
 From the project root, on any OS:
 
-| Command         | What it does                                                                     |
-| --------------- | -------------------------------------------------------------------------------- |
-| `npm install`   | Installs the root tools (`concurrently`, `cross-env`)                            |
-| `npm run setup` | Installs backend and frontend, and seeds the database                            |
-| `npm run demo`  | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends) |
-| `npm run dev`   | One backend node and the frontend, with reload on save                           |
-| `npm run check` | The same checks CI runs (format, lint, typecheck, tests with coverage), for both |
+| Command             | What it does                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `npm install`       | Installs the root tools (`concurrently`, `cross-env`)                                 |
+| `npm run setup`     | Installs backend and frontend, and seeds the database                                 |
+| `npm run demo`      | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends)      |
+| `npm run demo:live` | The same, but you edit the chain by hand ([docs/tamper-demo.md](docs/tamper-demo.md)) |
+| `npm run dev`       | One backend node and the frontend, with reload on save                                |
+| `npm run check`     | The same checks CI runs (format, lint, typecheck, tests with coverage), for both      |
 
 ## Backend setup
 

@@ -1,5 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { rmSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { createInterface } from 'node:readline/promises'
 import { loadChain, saveChain } from '../src/chain/chain-storage.js'
 import { resolveChainPath } from '../src/config/chain-path.js'
 import { tamperChain } from '../src/demo/tamper.js'
@@ -12,6 +14,8 @@ const NODE_2 = 3002
 const STARTUP_TIMEOUT_MS = 30_000
 const SYNC_TIMEOUT_MS = 20_000
 const POLL_INTERVAL_MS = 250
+// With --live the demo stops before the scripted edit, so the presenter can make it by hand.
+const LIVE = process.argv.includes('--live')
 
 interface Envelope<T> {
   success: boolean
@@ -248,6 +252,35 @@ async function tamperWithNode2(scapegoat: User): Promise<void> {
   say(`Node ${NODE_2} restarted from the edited file`)
 }
 
+async function waitForEnter(): Promise<void> {
+  const prompt = createInterface({ input: process.stdin })
+  await prompt.question('')
+  prompt.close()
+}
+
+async function liveTamperWithNode2(): Promise<void> {
+  await stopNode(NODE_2)
+  const chainPath = resolve(resolveChainPath({ CHAIN_DIR }, NODE_2))
+  say(`Node ${NODE_2} stopped. Its chain is saved in:`)
+  say(`  ${chainPath}`)
+
+  const target = chainOf(NODE_2).find((block) => block.data.length > 0)
+  const event = target?.data[0]
+  if (target && event) {
+    say(
+      `Block ${target.index} starts with: userId ${event.userId} (${event.role}) ${event.action} patient ${event.patientId}`,
+    )
+  }
+
+  say('Open the file, change that userId (or the action or patientId), save it,')
+  say('and press Enter here to restart the node.')
+  await waitForEnter()
+
+  startNode(NODE_2, NODE_1)
+  await waitForHealth(NODE_2)
+  say(`Node ${NODE_2} restarted from the file as you left it`)
+}
+
 async function run(): Promise<void> {
   step('1. Seed the database')
   seedDatabase()
@@ -267,14 +300,24 @@ async function run(): Promise<void> {
   say(`Both nodes hold the same ${length}-block chain`)
   for (const port of [NODE_1, NODE_2]) say(describeStatus(port, await chainStatus(port)))
 
-  step('5. Tamper with the chain on disk')
-  await tamperWithNode2(nurse)
+  if (LIVE) {
+    step('5. Tamper with the chain yourself')
+    await liveTamperWithNode2()
+  } else {
+    step('5. Tamper with the chain on disk')
+    await tamperWithNode2(nurse)
+  }
 
   step('6. Detect it')
-  for (const port of [NODE_1, NODE_2]) say(describeStatus(port, await chainStatus(port)))
+  const node2Status = await chainStatus(NODE_2)
+  say(describeStatus(NODE_1, await chainStatus(NODE_1)))
+  say(describeStatus(NODE_2, node2Status))
+  if (LIVE && node2Status.valid) {
+    say('Node 3002 is still valid: the file was not changed, or not saved before Enter')
+  }
 
   step('Demo running')
-  say('Frontend: cd ../frontend && npm run dev, then open http://localhost:5173')
+  say('Frontend: http://localhost:5173 (started by the root npm run demo)')
   say(`Chain status: http://localhost:${NODE_1}/api/chain/status and :${NODE_2}`)
   say('Press Ctrl+C to stop both nodes')
 }
