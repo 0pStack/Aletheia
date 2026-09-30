@@ -59,6 +59,18 @@ Staff arrive here, greeted by name and role, with the search one step away.
 
 _Still to add before hand-in: a journal with its access log, the same record seen by the patient, and the access-denied page._
 
+## Quick start
+
+From the project root, on any OS:
+
+| Command         | What it does                                                                     |
+| --------------- | -------------------------------------------------------------------------------- |
+| `npm install`   | Installs the root tools (`concurrently`, `cross-env`)                            |
+| `npm run setup` | Installs backend and frontend, and seeds the database                            |
+| `npm run demo`  | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends) |
+| `npm run dev`   | One backend node and the frontend, with reload on save                           |
+| `npm run check` | The same checks CI runs (format, lint, typecheck, tests with coverage), for both |
+
 ## Backend setup
 
 Requires Node 24 or later, the version CI runs (`engines` in both `package.json` files says the same). From the project root:
