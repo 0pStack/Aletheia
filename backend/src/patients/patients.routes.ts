@@ -6,6 +6,7 @@ import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
 import { getVisibleNotes, toNoteResponse } from '../notes/notes.js'
 import { requireRole } from '../rbac.js'
+import { parsePatientId, refuseOtherPatientsRecord } from './patient-access.js'
 
 interface PatientSummary {
   id: number
@@ -73,15 +74,13 @@ export function createPatientsRouter(
 
   router.get('/:id', requireRole('DOCTOR', 'NURSE', 'CLINIC', 'PATIENT'), (req, res) => {
     const user = req.session.user
-    const patientId = Number(req.params.id)
+    const patientId = parsePatientId(req.params.id)
 
-    if (!user || !Number.isInteger(patientId) || patientId <= 0) {
+    if (!user || patientId === undefined) {
       return fail(res, 400, 'BAD_REQUEST', 'Valid patient is required.')
     }
 
-    if (user.role === 'PATIENT' && user.patientId !== patientId) {
-      logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
-
+    if (refuseOtherPatientsRecord(req, blockchain, keyPair, patientId)) {
       return fail(res, 403, 'FORBIDDEN', 'You do not have permission to access this patient.')
     }
 
