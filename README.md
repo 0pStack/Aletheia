@@ -68,6 +68,7 @@ From the project root, on any OS:
 | `npm install`         | Installs the root tools (`concurrently`, `cross-env`)                            |
 | `npm run setup`       | Installs backend and frontend, and seeds the database                            |
 | `npm run demo`        | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends) |
+| `npm run demo2`       | While the demo runs: a second frontend on :5174 against node 3002                |
 | `npm run demo:tamper` | While the demo runs: tamper with node 3002's chain (run it last)                 |
 | `npm run dev`         | One backend node and the frontend, with reload on save                           |
 | `npm run check`       | The same checks CI runs (format, lint, typecheck, tests with coverage), for both |
