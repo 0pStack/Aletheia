@@ -63,13 +63,14 @@ _Still to add before hand-in: a journal with its access log, the same record see
 
 From the project root, on any OS:
 
-| Command         | What it does                                                                     |
-| --------------- | -------------------------------------------------------------------------------- |
-| `npm install`   | Installs the root tools (`concurrently`, `cross-env`)                            |
-| `npm run setup` | Installs backend and frontend, and seeds the database                            |
-| `npm run demo`  | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends) |
-| `npm run dev`   | One backend node and the frontend, with reload on save                           |
-| `npm run check` | The same checks CI runs (format, lint, typecheck, tests with coverage), for both |
+| Command               | What it does                                                                     |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `npm install`         | Installs the root tools (`concurrently`, `cross-env`)                            |
+| `npm run setup`       | Installs backend and frontend, and seeds the database                            |
+| `npm run demo`        | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends) |
+| `npm run demo:tamper` | While the demo runs: tamper with node 3002's chain (run it last)                 |
+| `npm run dev`         | One backend node and the frontend, with reload on save                           |
+| `npm run check`       | The same checks CI runs (format, lint, typecheck, tests with coverage), for both |
 
 ## Backend setup
 
@@ -93,10 +94,13 @@ The server listens on http://localhost:3001 (set `PORT` to change it). `GET /api
 | `npm run format` / `format:check` | Prettier                                                          |
 | `npm run build` / `npm start`     | Compile to `dist/` and run it                                     |
 | `npm run demo`                    | Seed, start both nodes and run the tamper demo (see below)        |
+| `npm run demo:tamper`             | Tell the running demo to tamper with node 3002 (see below)        |
 
 ### Two-node demo
 
-`npm run demo` reseeds the database, starts nodes 3001 and 3002, and signs in a doctor, a nurse and a patient to read, write and be refused access. It waits until both nodes hold the same chain, then stops node 3002, rewrites who made the first recorded access in its saved chain, and restarts it. Node 3002 logs a warning on startup and `GET /api/chain/status` reports the block that was edited, while node 3001 stays valid. The nodes keep running until Ctrl+C, so the frontend can be pointed at them (`VITE_USE_MOCKS=false`).
+`npm run demo` reseeds the database, starts nodes 3001 and 3002, and signs in a doctor, a nurse and a patient to read, write and be refused access. It waits until both nodes hold the same chain and then keeps both running with valid chains, so the frontend can be pointed at them (`VITE_USE_MOCKS=false`) to show a note written on one node appearing on the other.
+
+Run `npm run demo:tamper` in a second terminal when that part is done. The demo then stops node 3002, rewrites who made the first recorded access in its saved chain, and restarts it. Node 3002 logs a warning on startup and `GET /api/chain/status` reports the block that was edited, while node 3001 stays valid. Tamper last: from then on node 3002 rejects every new block from 3001 (`Rejected invalid incoming block`), because it checks its own edited block along with each new one. The nodes keep running until Ctrl+C.
 
 The demo keeps its chains in `backend/data/demo/` and clears them on every run, so the chains in `backend/data/` are left alone. The nodes read that folder from `CHAIN_DIR`, which defaults to `data`.
 

@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "db:seed": "tsx db/seed.ts",
     "demo": "tsx scripts/demo.ts",
+    "demo:tamper": "tsx scripts/demo-tamper.ts",
     "dev:node1": "cross-env PORT=3001 PEERS=ws://localhost:3002 tsx watch src/index.ts",
     "dev:node2": "cross-env PORT=3002 PEERS=ws://localhost:3001 tsx watch src/index.ts",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage"
