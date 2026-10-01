@@ -5,4 +5,5 @@ export const queryKeys = {
   patientList: ['patients', 'list'] as const,
   accessLog: (id: number | null) => ['patients', id, 'access-log'] as const,
   verification: (eventId: string) => ['verify', eventId] as const,
+  chainStatus: ['chain', 'status'] as const,
 } as const

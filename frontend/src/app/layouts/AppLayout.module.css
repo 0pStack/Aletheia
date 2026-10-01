@@ -27,6 +27,7 @@
 .header[data-over-scene] {
   --color-text: var(--color-paper);
   --color-text-muted: color-mix(in oklch, var(--color-paper) 70%, transparent);
+  --color-alarm: oklch(0.74 0.15 28);
 
   color: var(--color-text);
   border-bottom-color: color-mix(in oklch, var(--color-paper) 14%, transparent);

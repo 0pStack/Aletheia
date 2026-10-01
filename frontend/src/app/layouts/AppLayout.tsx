@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router'
 import { arrivedByDive } from '../../features/auth/arrival'
 import { useLogout } from '../../features/auth/useLogout'
+import { TamperAlert } from '../../features/chain-status/TamperAlert'
 import styles from './AppLayout.module.css'
 
 const MAIN_CONTENT_ID = 'main-content'
@@ -45,6 +46,7 @@ export function AppLayout() {
           Aletheia
         </Link>
         <nav aria-label="Main" className={styles.nav}>
+          <TamperAlert />
           {/* Search is one step from the landing's own action; the team is at the foot of the page. */}
           <Link to="/#team" className={styles.navLink}>
             Team

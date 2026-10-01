@@ -14,6 +14,11 @@ export interface BlockchainOptions {
   onFlushError?: (error: unknown, events: readonly AccessEvent[]) => void
 }
 
+export interface TamperRecord {
+  readonly blockIndex: number
+  readonly detectedAt: string
+}
+
 const GENESIS_TIMESTAMP = '2026-01-01T00:00:00.000Z'
 
 export class Blockchain {
@@ -26,6 +31,9 @@ export class Blockchain {
   private readonly onNewBlock: ((block: Block) => void) | undefined
   private readonly onFlushError: BlockchainOptions['onFlushError']
   private readonly trustedKeys: TrustedNodeKeys | undefined
+  // A peer sync replaces a tampered chain with the honest one, which erases the evidence;
+  // this keeps the first detection for the life of the process.
+  private tamperRecord: TamperRecord | null = null
 
   constructor(options: BlockchainOptions = {}) {
     const batchSize = options.batchSize ?? 1
@@ -42,6 +50,11 @@ export class Blockchain {
     this.trustedKeys = options.trustedKeys
     this.chain =
       options.chain && options.chain.length > 0 ? options.chain : [this.createGenesisBlock()]
+    if (options.chain) this.findFirstInvalidBlockIndex()
+  }
+
+  get tamperDetected(): TamperRecord | null {
+    return this.tamperRecord
   }
 
   private createGenesisBlock(): Block {
@@ -190,6 +203,9 @@ export class Blockchain {
       return false
     }
 
+    // Checked before the swap: afterwards the tampered chain is gone.
+    this.findFirstInvalidBlockIndex()
+
     const incomingEventIds = new Set(
       incoming.flatMap((block) => block.data.map((event) => event.id)),
     )
@@ -209,7 +225,11 @@ export class Blockchain {
   }
 
   findFirstInvalidBlockIndex(): number | null {
-    return findFirstInvalidBlockIndex(this.chain, this.trustedKeys)
+    const invalidIndex = findFirstInvalidBlockIndex(this.chain, this.trustedKeys)
+    if (invalidIndex !== null && this.tamperRecord === null) {
+      this.tamperRecord = { blockIndex: invalidIndex, detectedAt: new Date().toISOString() }
+    }
+    return invalidIndex
   }
 
   isValidThrough(position: number): boolean {
