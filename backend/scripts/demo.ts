@@ -1,11 +1,10 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
-import { rmSync } from 'node:fs'
+import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { loadChain, saveChain } from '../src/chain/chain-storage.js'
 import { resolveChainPath } from '../src/config/chain-path.js'
 import { tamperChain } from '../src/demo/tamper.js'
+import { CHAIN_DIR, TAMPER_OK, TAMPER_REQUEST, TAMPER_RESULT } from './demo-paths.js'
 
-// The demo keeps its chains here, so it never touches the ones in ./data.
-const CHAIN_DIR = 'data/demo'
 const PASSWORD = 'Password123!'
 const NODE_1 = 3001
 const NODE_2 = 3002
@@ -267,16 +266,39 @@ async function run(): Promise<void> {
   say(`Both nodes hold the same ${length}-block chain`)
   for (const port of [NODE_1, NODE_2]) say(describeStatus(port, await chainStatus(port)))
 
-  step('5. Tamper with the chain on disk')
-  await tamperWithNode2(nurse)
-
-  step('6. Detect it')
-  for (const port of [NODE_1, NODE_2]) say(describeStatus(port, await chainStatus(port)))
-
-  step('Demo running')
+  step('Demo running, both chains valid')
   say('Frontend: cd ../frontend && npm run dev, then open http://localhost:5173')
   say(`Chain status: http://localhost:${NODE_1}/api/chain/status and :${NODE_2}`)
+  say('When the P2P part is done, run `npm run demo:tamper` in another terminal')
   say('Press Ctrl+C to stop both nodes')
+
+  // Tampering waits for the request because node 3002 rejects every new block afterwards,
+  // which would end the live P2P part of the presentation.
+  await waitForTamperRequest()
+  rmSync(TAMPER_REQUEST, { force: true })
+
+  try {
+    step('5. Tamper with the chain on disk')
+    await tamperWithNode2(nurse)
+
+    step('6. Detect it')
+    for (const port of [NODE_1, NODE_2]) say(describeStatus(port, await chainStatus(port)))
+    writeFileSync(TAMPER_RESULT, TAMPER_OK)
+  } catch (error) {
+    writeFileSync(TAMPER_RESULT, error instanceof Error ? error.message : String(error))
+    throw error
+  }
+  say('Press Ctrl+C to stop both nodes')
+}
+
+async function waitForTamperRequest(): Promise<void> {
+  while (!existsSync(TAMPER_REQUEST)) {
+    // A node that died would make the tamper fail late and confusingly, so stop here.
+    if (!nodes.has(NODE_1) || !nodes.has(NODE_2)) {
+      throw new Error('A node stopped while waiting for `npm run demo:tamper`')
+    }
+    await wait(POLL_INTERVAL_MS)
+  }
 }
 
 function stopAll(): void {

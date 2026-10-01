@@ -5,6 +5,7 @@
     "setup": "npm ci --prefix backend && npm ci --prefix frontend && npm run db:seed --prefix backend",
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "demo": "concurrently -k -n nodes,web -c blue,magenta \"npm run demo --prefix backend\" \"cross-env VITE_USE_MOCKS=false npm run dev --prefix frontend\"",
+    "demo:tamper": "npm run demo:tamper --prefix backend",
     "check": "npm run check --prefix backend && npm run check --prefix frontend"
   },
   "devDependencies": {
