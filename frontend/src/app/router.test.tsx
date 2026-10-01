@@ -23,6 +23,14 @@ function signedIn() {
   })
 }
 
+function awaitingAccess() {
+  return HttpResponse.json({
+    success: true,
+    data: { id: 5, username: 'unauth_user', name: 'Eve Stranded', role: 'UNAUTHORIZED', patientId: null },
+    error: null,
+  })
+}
+
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(
@@ -114,5 +122,18 @@ describe('app routes', () => {
 
     expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: /main/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to patients/i })).toHaveAttribute(
+      'href',
+      '/#patients',
+    )
+  })
+
+  it('sends a user without patient search home from an unknown page', async () => {
+    server.use(http.get('*/api/auth/session', awaitingAccess))
+
+    renderAt('/nowhere')
+
+    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to home/i })).toHaveAttribute('href', '/')
   })
 })

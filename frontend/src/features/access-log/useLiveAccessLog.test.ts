@@ -128,12 +128,13 @@ describe('useLiveAccessLog', () => {
     expect(invalidate).not.toHaveBeenCalled()
   })
 
-  it('refreshes the journal when someone else writes a note', () => {
+  it('refreshes the journal and the access log when someone else writes a note', () => {
     const { invalidate } = renderLive(4, 1)
 
     latestSocket().receive(newBlock([{ patientId: 4, action: 'WRITE', userId: 2 }]))
 
     expect(invalidate).toHaveBeenCalledWith(journalKey)
+    expect(invalidate).toHaveBeenCalledWith(accessLogKey)
   })
 
   it('does not refresh on the first connect', () => {

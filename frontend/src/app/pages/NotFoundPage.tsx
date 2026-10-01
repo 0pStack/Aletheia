@@ -1,11 +1,11 @@
-import { Link } from 'react-router'
+import { BackLink } from '../../features/home/BackLink'
 
 export function NotFoundPage() {
   return (
     <>
       <h1>Page not found</h1>
       <p>
-        <Link to="/patients">Back to patients</Link>
+        <BackLink />
       </p>
     </>
   )

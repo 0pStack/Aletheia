@@ -67,10 +67,7 @@ export function useLiveAccessLog(patientId: number | null, viewerId: number | nu
       })
 
       next.addEventListener('message', (event) => {
-        if (blockHasNewNote(event.data, patientId, viewerId)) {
-          refreshJournal()
-          return
-        }
+        if (blockHasNewNote(event.data, patientId, viewerId)) refreshJournal()
         if (blockTouchesPatient(event.data, patientId)) refreshAccessLog()
       })
 

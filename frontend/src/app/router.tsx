@@ -4,7 +4,6 @@ import { HomePage } from '../features/home/HomePage'
 import { JournalPanel } from '../features/journal/JournalPanel'
 import { RequireAuth } from './guards/RequireAuth'
 import { AppLayout } from './layouts/AppLayout'
-import { AccessDeniedPage } from './pages/AccessDeniedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 export const routes: RouteObject[] = [
@@ -31,5 +30,4 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  { path: '/access-denied', element: <AccessDeniedPage /> },
 ]
