@@ -20,13 +20,13 @@ The result is a log a patient can read and nobody can quietly rewrite.
 
 ### What each role sees
 
-| Role                      | Search | Journal     | Notes they can read           | Write | Access log                       |
-| :------------------------ | :----- | :---------- | :---------------------------- | :---- | :------------------------------- |
-| Läkare (`DOCTOR`)         | yes    | any patient | `ALL`, `STAFF`, own `PRIVATE` | yes   | yes                              |
-| Sjuksköterska (`NURSE`)   | yes    | any patient | `ALL`, `STAFF`, own `PRIVATE` | yes   | yes                              |
-| Vårdcentral (`CLINIC`)    | yes    | any patient | `ALL`, `STAFF`, own `PRIVATE` | yes   | yes                              |
-| Patient (`PATIENT`)       | no     | their own   | `ALL` only                    | no    | their own                        |
-| Obehörig (`UNAUTHORIZED`) | no     | none        | none                          | no    | none — and the attempt is logged |
+| Role                          | Search | Journal     | Notes they can read           | Write | Access log                       |
+| :---------------------------- | :----- | :---------- | :---------------------------- | :---- | :------------------------------- |
+| Doctor (`DOCTOR`)             | yes    | any patient | `ALL`, `STAFF`, own `PRIVATE` | yes   | yes                              |
+| Nurse (`NURSE`)               | yes    | any patient | `ALL`, `STAFF`, own `PRIVATE` | yes   | yes                              |
+| Clinic (`CLINIC`)             | yes    | any patient | `ALL`, `STAFF`, own `PRIVATE` | yes   | yes                              |
+| Patient (`PATIENT`)           | no     | their own   | `ALL` only                    | no    | their own                        |
+| Unauthorized (`UNAUTHORIZED`) | no     | none        | none                          | no    | none — and the attempt is logged |
 
 Hidden notes are filtered in SQL before the response is built, so a note a viewer may not read never reaches their browser at all.
 
@@ -41,9 +41,9 @@ backend/            one node; run two on 3001 and 3002
   └── chain        access events, sha256 + Merkle   (who looked, and when)
 ```
 
-Two nodes run side by side on 3001 and 3002 (`npm run dev:node1` / `dev:node2`), connected over WebSocket. A note written on one stays in that node's SQL — the medical text is not replicated. What crosses between nodes is the _access log_, because that is the part that must not depend on trusting a single server.
+Two nodes run side by side on 3001 and 3002 (`npm run dev:node1` / `dev:node2` in `backend/`), connected over WebSocket. Locally both open the same SQLite file, but the medical text never travels between them. What crosses between nodes is the _access log_, because that is the part that must not depend on trusting a single server.
 
-Distributing blocks between nodes is still being built ([#29](https://github.com/0pStack/Aletheia/issues/29), [#30](https://github.com/0pStack/Aletheia/issues/30), [#39](https://github.com/0pStack/Aletheia/issues/39)). The connection, the chain and the log itself are in place.
+Every access event is signed with the key of the node that recorded it, and each new block is broadcast to the node's peers. A peer must answer a signed challenge with a trusted key before it is accepted, every incoming block is checked (hash, Merkle root, event signatures) before it is appended, and a node reconnects on its own with backoff if its peer restarts. `GET /api/chain/status` reports whether a node's chain is valid, and which block was edited if it is not.
 
 The wire format for every endpoint is in [docs/interfaces.md](docs/interfaces.md). Planning and status live in [docs/current-work.md](docs/current-work.md).
 
@@ -88,11 +88,14 @@ The server listens on http://localhost:3001 (set `PORT` to change it). `GET /api
 | Script                            | What it does                                                      |
 | --------------------------------- | ----------------------------------------------------------------- |
 | `npm run dev`                     | Start with reload on save (`tsx watch`)                           |
+| `npm run dev:node1` / `dev:node2` | Start node 3001 or 3002, each peered with the other               |
+| `npm run db:seed`                 | Create the tables and fill them with the test accounts            |
 | `npm test`                        | Run the Vitest tests once (`npm run test:watch` to keep watching) |
 | `npm run test:coverage`           | Run the tests with coverage; fails below the thresholds           |
 | `npm run lint`                    | ESLint                                                            |
 | `npm run typecheck`               | TypeScript check without building                                 |
 | `npm run format` / `format:check` | Prettier                                                          |
+| `npm run check`                   | Format check, lint, typecheck and coverage, as CI runs them       |
 | `npm run build` / `npm start`     | Compile to `dist/` and run it                                     |
 | `npm run demo`                    | Seed, start both nodes and run the tamper demo (see below)        |
 | `npm run demo:tamper`             | Tell the running demo to tamper with node 3002 (see below)        |
@@ -120,6 +123,17 @@ npm run dev
 No `.env` is needed to start: in development the API is mocked by default. Copy `.env.example` to `.env` only to change the settings below.
 
 The dev server runs on http://localhost:5173 and proxies `/api` and `/ws` to `VITE_API_TARGET` (default `http://localhost:3001`), so the session cookie works without CORS.
+
+| Script                              | What it does                                                |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `npm run dev`                       | Vite dev server with hot reload                             |
+| `npm test`                          | Vitest in watch mode (`npm test -- --run` for a single run) |
+| `npm run test:coverage`             | Run the tests once with coverage                            |
+| `npm run lint`                      | ESLint                                                      |
+| `npm run typecheck`                 | TypeScript project check                                    |
+| `npm run format` / `format:check`   | Prettier                                                    |
+| `npm run check`                     | Format check, lint, typecheck and coverage, as CI runs them |
+| `npm run build` / `npm run preview` | Production build to `dist/`, and serve it locally           |
 
 | Variable          | Default                 | Purpose                                                                          |
 | ----------------- | ----------------------- | -------------------------------------------------------------------------------- |
@@ -249,6 +263,7 @@ frontend/src/
   app/        router, auth guard, layout, app-level pages
   features/   auth, patients, journal, access-log
   mocks/      MSW handlers for dev and tests
+  shared/     UI primitives, motion, role labels
   styles/     design tokens, reset, global styles
   test/       Vitest setup
 
@@ -257,8 +272,11 @@ backend/src/
   patients/   search and patient detail
   notes/      note writing and visibility filtering
   access-log/ the chain, read back per patient
-  chain/      block, blockchain, Merkle root, keypairs
-  config/     port, peers, node id
+  chain/      block, blockchain, Merkle root, keypairs, event signing
+  verify/     chain verification endpoint
+  config/     port, peers, node id, chain path, session settings
+  demo/       tamper step for the two-node demo
+  *.ts        app, RBAC, audit logger, WebSocket server, peer auth and sync
 ```
 
 ## Who worked on it
