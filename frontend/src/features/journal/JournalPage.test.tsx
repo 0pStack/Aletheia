@@ -115,7 +115,10 @@ describe('JournalPage', () => {
     renderJournal('/patients/2')
 
     const journal = await screen.findByRole('dialog', { name: /access denied/i })
-    expect(within(journal).getByRole('link', { name: /back to home/i })).toHaveAttribute('href', '/')
+    expect(within(journal).getByRole('link', { name: /back to home/i })).toHaveAttribute(
+      'href',
+      '/',
+    )
     // Still inside the app: the header is there to sign out from.
     expect(screen.getByRole('button', { name: /sign out/i, hidden: true })).toBeInTheDocument()
   })

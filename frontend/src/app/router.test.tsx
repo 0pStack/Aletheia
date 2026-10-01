@@ -26,7 +26,13 @@ function signedIn() {
 function awaitingAccess() {
   return HttpResponse.json({
     success: true,
-    data: { id: 5, username: 'unauth_user', name: 'Eve Stranded', role: 'UNAUTHORIZED', patientId: null },
+    data: {
+      id: 5,
+      username: 'unauth_user',
+      name: 'Eve Stranded',
+      role: 'UNAUTHORIZED',
+      patientId: null,
+    },
     error: null,
   })
 }
