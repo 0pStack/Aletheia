@@ -73,6 +73,28 @@ describe('app routes', () => {
     expect(await screen.findByRole('region', { name: 'Team' })).toHaveAttribute('id', 'team')
   })
 
+  it('flags a tampered chain in the header', async () => {
+    server.use(
+      http.get('*/api/auth/session', signedIn),
+      http.get('*/api/chain/status', () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            valid: true,
+            firstInvalidBlockIndex: null,
+            tamperDetected: { blockIndex: 2, detectedAt: '2026-10-01T12:00:00.000Z' },
+          },
+          error: null,
+        }),
+      ),
+    )
+
+    renderAt('/')
+
+    const header = await screen.findByRole('banner')
+    expect(await within(header).findByRole('status')).toHaveTextContent(/tampered at block 2/i)
+  })
+
   it('signs the user out and returns to the sign-in page', async () => {
     server.use(http.get('*/api/auth/session', signedIn))
     const router = renderAt('/patients')

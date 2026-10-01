@@ -90,6 +90,7 @@ export function createApp(options: CreateAppOptions): Express {
     return ok(res, {
       valid: firstInvalidBlockIndex === null,
       firstInvalidBlockIndex,
+      tamperDetected: blockchain.tamperDetected,
     })
   })
 

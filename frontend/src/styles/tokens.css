@@ -17,6 +17,9 @@
   --color-border-input: var(--color-pewter);
   --color-divider: var(--color-ash-mist);
   --color-focus: var(--color-obsidian);
+  /* The one break from monochrome: a tampered chain. Oxblood's hue, dark enough for small
+     text on paper (about 6:1); flipped lighter where the header sits over the scene. */
+  --color-alarm: oklch(0.5 0.17 28);
 
   /* Media only (login hero). Reads as green/amber/red status, so never near data. */
   --color-iridescent-sage: rgb(160 224 171);

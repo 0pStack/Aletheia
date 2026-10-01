@@ -1,5 +1,6 @@
 import { accessLogHandlers } from './handlers/accessLog'
 import { authHandlers } from './handlers/auth'
+import { chainHandlers } from './handlers/chain'
 import { patientHandlers } from './handlers/patients'
 import { verifyHandlers } from './handlers/verify'
 
@@ -10,4 +11,5 @@ export const handlers = [
   ...patientHandlers,
   ...accessLogHandlers,
   ...verifyHandlers,
+  ...chainHandlers,
 ]

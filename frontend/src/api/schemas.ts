@@ -85,3 +85,11 @@ export const eventProofSchema = z.object({
   isValid: z.boolean(),
 })
 export type EventProof = z.infer<typeof eventProofSchema>
+
+export const chainStatusSchema = z.object({
+  valid: z.boolean(),
+  firstInvalidBlockIndex: z.number().nullable(),
+  // Outlives the repair: a peer sync swaps the tampered chain for the honest one.
+  tamperDetected: z.object({ blockIndex: z.number(), detectedAt: z.iso.datetime() }).nullable(),
+})
+export type ChainStatus = z.infer<typeof chainStatusSchema>

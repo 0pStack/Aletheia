@@ -1,0 +1,19 @@
+/* Sized and set like the nav links beside it; only the colour says something is wrong. */
+.alert {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-alarm);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in oklch, currentColor 22%, transparent);
+}

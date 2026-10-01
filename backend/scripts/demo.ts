@@ -272,8 +272,8 @@ async function run(): Promise<void> {
   say('When the P2P part is done, run `npm run demo:tamper` in another terminal')
   say('Press Ctrl+C to stop both nodes')
 
-  // Tampering waits for the request because node 3002 rejects every new block afterwards,
-  // which would end the live P2P part of the presentation.
+  // Tampering waits for the request because node 3002 then rejects blocks until it resyncs
+  // from 3001, which would interrupt the live P2P part of the presentation.
   await waitForTamperRequest()
   rmSync(TAMPER_REQUEST, { force: true })
 
