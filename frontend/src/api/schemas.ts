@@ -67,6 +67,7 @@ export const accessLogEntrySchema = z.object({
   timestamp: z.string(),
   serverId: z.string(),
   blockIndex: z.number(),
+  isValid: z.boolean(),
 })
 export type AccessLogEntry = z.infer<typeof accessLogEntrySchema>
 
