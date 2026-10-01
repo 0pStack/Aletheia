@@ -1,8 +1,9 @@
-import { Link, Navigate, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { ApiError } from '../../api/http'
 import { AccessLog } from '../access-log/AccessLog'
 import { Button } from '../../shared/ui/Button/Button'
 import { useSession } from '../auth/useSession'
+import { BackLink } from '../home/BackLink'
 import { getJournalAccess } from './journalAccess'
 import { NoteComposer } from './NoteForm'
 import { NoteList } from './NoteList'
@@ -23,7 +24,19 @@ function PatientNotFound() {
     <>
       <h1 id={JOURNAL_TITLE_ID}>Patient not found</h1>
       <p>
-        <Link to="/#patients">Back to patients</Link>
+        <BackLink />
+      </p>
+    </>
+  )
+}
+
+// Shown in the journal itself, so the user stays in the app with the header to sign out from.
+function AccessDenied() {
+  return (
+    <>
+      <h1 id={JOURNAL_TITLE_ID}>Access denied</h1>
+      <p>
+        You do not have permission to view this record. <BackLink />
       </p>
     </>
   )
@@ -43,7 +56,7 @@ export function JournalPage() {
 
   if (detail.isError) {
     const status = detail.error instanceof ApiError ? detail.error.status : null
-    if (status === 403) return <Navigate to="/access-denied" replace />
+    if (status === 403) return <AccessDenied />
     if (status === 404) return <PatientNotFound />
     return (
       <div className={styles.state}>

@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
@@ -11,6 +11,7 @@ import { setCurrentSessionUserId } from '../../mocks/sessionState'
 
 const DOCTOR_ID = 1
 const PATIENT_ANNA_ID = 4
+const UNAUTHORIZED_ID = 5
 
 function renderJournal(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -88,7 +89,10 @@ describe('JournalPage', () => {
     renderJournal('/patients/999')
 
     expect(await screen.findByRole('heading', { name: /patient not found/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /back to patients/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to patients/i })).toHaveAttribute(
+      'href',
+      '/#patients',
+    )
   })
 
   it.each(['abc', '1e2', '0x10', '0'])(
@@ -102,12 +106,21 @@ describe('JournalPage', () => {
     },
   )
 
-  it('sends a patient opening someone else’s record to the access denied page', async () => {
-    setCurrentSessionUserId(PATIENT_ANNA_ID)
+  it.each([
+    ['a patient opening someone else’s record', PATIENT_ANNA_ID],
+    ['an account awaiting access', UNAUTHORIZED_ID],
+  ])('denies %s inside the journal, with a way home', async (_, userId) => {
+    setCurrentSessionUserId(userId)
 
     renderJournal('/patients/2')
 
-    expect(await screen.findByRole('heading', { name: /access denied/i })).toBeInTheDocument()
+    const journal = await screen.findByRole('dialog', { name: /access denied/i })
+    expect(within(journal).getByRole('link', { name: /back to home/i })).toHaveAttribute(
+      'href',
+      '/',
+    )
+    // Still inside the app: the header is there to sign out from.
+    expect(screen.getByRole('button', { name: /sign out/i, hidden: true })).toBeInTheDocument()
   })
 
   it('offers a retry when the journal fails to load', async () => {
