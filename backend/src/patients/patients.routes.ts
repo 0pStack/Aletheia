@@ -6,6 +6,7 @@ import type { KeyPair } from '../chain/keypair.js'
 import { fail, ok } from '../envelope.js'
 import { getVisibleNotes, toNoteResponse } from '../notes/notes.js'
 import { requireRole } from '../rbac.js'
+import { parsePatientId, refuseOtherPatientsRecord } from './patient-access.js'
 
 interface PatientSummary {
   id: number
@@ -14,6 +15,11 @@ interface PatientSummary {
 }
 
 const LIST_LIMIT = 50
+
+const PATIENT_SUMMARY_SELECT = `
+  SELECT id, name, personal_number AS personalNumber
+  FROM patients
+`
 
 function escapeLikeWildcards(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`)
@@ -36,8 +42,7 @@ export function createPatientsRouter(
     if (q === undefined) {
       const patients = db
         .prepare(
-          `SELECT id, name, personal_number AS personalNumber
-           FROM patients
+          `${PATIENT_SUMMARY_SELECT}
            ORDER BY name, id
            LIMIT ?`,
         )
@@ -57,8 +62,7 @@ export function createPatientsRouter(
 
     const patients = db
       .prepare(
-        `SELECT id, name, personal_number AS personalNumber
-         FROM patients
+        `${PATIENT_SUMMARY_SELECT}
          WHERE name LIKE ? ESCAPE '\\'
             OR (? = 1 AND REPLACE(personal_number, '-', '') LIKE ? ESCAPE '\\')
          ORDER BY name, id`,
@@ -70,25 +74,19 @@ export function createPatientsRouter(
 
   router.get('/:id', requireRole('DOCTOR', 'NURSE', 'CLINIC', 'PATIENT'), (req, res) => {
     const user = req.session.user
-    const patientId = Number(req.params.id)
+    const patientId = parsePatientId(req.params.id)
 
-    if (!user || !Number.isInteger(patientId) || patientId <= 0) {
+    if (!user || patientId === undefined) {
       return fail(res, 400, 'BAD_REQUEST', 'Valid patient is required.')
     }
 
-    if (user.role === 'PATIENT' && user.patientId !== patientId) {
-      logAccessEvent(req, blockchain, patientId, 'DENIED', keyPair)
-
+    if (refuseOtherPatientsRecord(req, blockchain, keyPair, patientId)) {
       return fail(res, 403, 'FORBIDDEN', 'You do not have permission to access this patient.')
     }
 
     const patient = db
       .prepare(
-        `SELECT
-            id,
-            name,
-            personal_number AS personalNumber
-          FROM patients
+        `${PATIENT_SUMMARY_SELECT}
           WHERE id = ?`,
       )
       .get(patientId) as PatientSummary | undefined

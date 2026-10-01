@@ -1,19 +1,11 @@
-import Database, { type Database as DatabaseType } from 'better-sqlite3'
+import type { Database as DatabaseType } from 'better-sqlite3'
 import type { Express } from 'express'
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createApp } from '../app.js'
-import { hashPassword } from '../auth/auth.js'
-import { Blockchain } from '../chain/blockchain.js'
-import { generateKeyPair } from '../chain/keypair.js'
+import type { Blockchain } from '../chain/blockchain.js'
 import { hasOnlyAllowedBlockchainPayloadFields } from '../chain/payload-security.js'
+import { createTestApp, PASSWORD } from '../test-support/test-app.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const SCHEMA_PATH = join(__dirname, '../../db/schema.sql')
-const PASSWORD = 'Password123!'
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 
 const NOTE_FIELDS = [
@@ -38,36 +30,34 @@ let bengtId: number
 let doctorId: number
 
 beforeAll(() => {
-  db = new Database(':memory:')
-  db.pragma('foreign_keys = ON')
-  db.exec(readFileSync(SCHEMA_PATH, 'utf-8'))
+  const fixture = createTestApp({
+    patients: [
+      { name: 'Anna Andersson', personalNumber: '19850101-1234' },
+      { name: 'Bengt Berg', personalNumber: '19700512-5678' },
+    ],
+    users: [
+      { username: 'doctor_dr_house', name: 'Dr. Gregory House', role: 'DOCTOR' },
+      {
+        username: 'patient_anna',
+        name: 'Anna Andersson',
+        role: 'PATIENT',
+        patientPersonalNumber: '19850101-1234',
+      },
+      { username: 'unauth_user', name: 'Eve Stranded', role: 'UNAUTHORIZED' },
+    ],
+  })
 
-  const insertPatient = db.prepare('INSERT INTO patients (name, personal_number) VALUES (?, ?)')
-  const insertUser = db.prepare(
-    `INSERT INTO users (username, password_hash, name, role, patient_id)
-     VALUES (?, ?, ?, ?, ?)`,
-  )
-
-  annaId = Number(insertPatient.run('Anna Andersson', '19850101-1234').lastInsertRowid)
-  bengtId = Number(insertPatient.run('Bengt Berg', '19700512-5678').lastInsertRowid)
-
-  const passwordHash = hashPassword(PASSWORD)
-
-  doctorId = Number(
-    insertUser.run('doctor_dr_house', passwordHash, 'Dr. Gregory House', 'DOCTOR', null)
-      .lastInsertRowid,
-  )
-
-  insertUser.run('patient_anna', passwordHash, 'Anna Andersson', 'PATIENT', annaId)
-  insertUser.run('unauth_user', passwordHash, 'Eve Stranded', 'UNAUTHORIZED', null)
+  db = fixture.db
+  app = fixture.app
+  blockchain = fixture.blockchain
+  annaId = fixture.patientId('19850101-1234')
+  bengtId = fixture.patientId('19700512-5678')
+  doctorId = fixture.userId('doctor_dr_house')
 
   db.prepare(
     `INSERT INTO notes (patient_id, author_id, text, visibility)
      VALUES (?, ?, ?, ?)`,
   ).run(annaId, doctorId, 'Mild fever. Prescribed rest.', 'ALL')
-
-  blockchain = new Blockchain()
-  app = createApp({ db, blockchain, keyPair: generateKeyPair() })
 })
 
 afterAll(() => {

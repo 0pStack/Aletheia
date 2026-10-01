@@ -59,6 +59,18 @@ Staff arrive here, greeted by name and role, with the search one step away.
 
 _Still to add before hand-in: a journal with its access log, the same record seen by the patient, and the access-denied page._
 
+## Quick start
+
+From the project root, on any OS:
+
+| Command         | What it does                                                                     |
+| --------------- | -------------------------------------------------------------------------------- |
+| `npm install`   | Installs the root tools (`concurrently`, `cross-env`)                            |
+| `npm run setup` | Installs backend and frontend, and seeds the database                            |
+| `npm run demo`  | Two-node tamper demo plus the frontend against it, in one terminal (Ctrl+C ends) |
+| `npm run dev`   | One backend node and the frontend, with reload on save                           |
+| `npm run check` | The same checks CI runs (format, lint, typecheck, tests with coverage), for both |
+
 ## Backend setup
 
 Requires Node 24 or later, the version CI runs (`engines` in both `package.json` files says the same). From the project root:
@@ -142,7 +154,7 @@ SQLite, through `better-sqlite3`. Four tables; the medical data lives here and o
 | `patients` | name, personal number         | `personal_number` is unique and indexed                 |
 | `users`    | login, password hash, role    | `patient_id` links a `PATIENT` account to its record    |
 | `notes`    | note text, author, visibility | `PRIVATE` / `STAFF` / `ALL`, filtered in SQL per reader |
-| `sessions` | session store                 | defined and indexed, not yet wired up (issue #96)       |
+| `sessions` | login sessions                | expired rows are cleared when a new session is saved    |
 
 Passwords are hashed with `scrypt` and a per-user salt. Foreign keys are enforced (`PRAGMA foreign_keys = ON`), notes cascade with their patient, and a user who has written a note cannot be deleted.
 
