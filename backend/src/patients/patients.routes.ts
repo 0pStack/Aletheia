@@ -16,6 +16,11 @@ interface PatientSummary {
 
 const LIST_LIMIT = 50
 
+const PATIENT_SUMMARY_SELECT = `
+  SELECT id, name, personal_number AS personalNumber
+  FROM patients
+`
+
 function escapeLikeWildcards(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`)
 }
@@ -37,8 +42,7 @@ export function createPatientsRouter(
     if (q === undefined) {
       const patients = db
         .prepare(
-          `SELECT id, name, personal_number AS personalNumber
-           FROM patients
+          `${PATIENT_SUMMARY_SELECT}
            ORDER BY name, id
            LIMIT ?`,
         )
@@ -58,8 +62,7 @@ export function createPatientsRouter(
 
     const patients = db
       .prepare(
-        `SELECT id, name, personal_number AS personalNumber
-         FROM patients
+        `${PATIENT_SUMMARY_SELECT}
          WHERE name LIKE ? ESCAPE '\\'
             OR (? = 1 AND REPLACE(personal_number, '-', '') LIKE ? ESCAPE '\\')
          ORDER BY name, id`,
@@ -83,11 +86,7 @@ export function createPatientsRouter(
 
     const patient = db
       .prepare(
-        `SELECT
-            id,
-            name,
-            personal_number AS personalNumber
-          FROM patients
+        `${PATIENT_SUMMARY_SELECT}
           WHERE id = ?`,
       )
       .get(patientId) as PatientSummary | undefined
