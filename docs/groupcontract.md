@@ -1,4 +1,4 @@
-# Gruppkontrakt: [GRUPPNAMN]
+# Gruppkontrakt: Aletheia
 
 ---
 
@@ -31,10 +31,10 @@
 ## 2. Mötestider & Rutiner
 
 * **Daily Standup:**
-  * 15 minuter varje vardag direkt efter föreläsningar/lektionstid.
+  * 15 minuter varje vardag 
   * Loggbok fylls i dagligen i samband med standupen.
 * **Veckoavstämning (Backlog, planering & retrospektiv):**
-  * Fredagar kl. 11:00–12:00 (genomgång av backlog, sprint planning och reflektion).
+  * Fredagar kl.09:00:00–12:00 (genomgång av backlog, sprint planning och reflektion).
 
 ---
 
@@ -53,7 +53,7 @@
 ## 4. Kommunikation & Samarbete
 
 * **Kanaler:** Microsoft Teams, GitHub, Visual Studio Code (VSC).
-* **Kommunikationstider:** Efter lektionstid.
+* **Kommunikationstider:** kl 09:00 varjedag
 * **Svarstid:** Återkoppling förväntas inom 24 timmar (ett dygn).
 * **Förhinder/Frånvaro:** Meddelas via Teams minst 1 dag i förväg.
 * **Kontaktvägar:** All kontakt sker uteslutande via Teams.
